@@ -24,9 +24,10 @@
         </ul>
 
         <!-- Exibe o NOME COMPLETO do usuário autenticado -->
-        <div class="nav-usuario" sec:authorize="isAuthenticated()">
+        <div class="nav-usuario" sec:authorize="isAuthenticated()"
+             th:with="userObj=${usuarioLogado != null ? usuarioLogado : @usuarioRepository.findByCpf(#authentication.name).orElse(null)}">
             <a th:href="@{/}" class="link-usuario-logado" title="Ir para a página inicial">
-                👤 <span th:text="${usuarioLogado != null ? usuarioLogado.nomeCompleto : #authentication.name}">Usuário</span>
+                👤 <span th:text="${userObj != null ? userObj.nomeCompleto : #authentication.name}">Usuário</span>
             </a>
             <form th:action="@{/logout}" method="post" class="form-logout-inline">
                 <button type="submit" class="btn-logout-link">Sair</button>
@@ -58,62 +59,58 @@
             </div>
         </div>
 
-        <!-- Div de Rolagem Isolada para a Tabela -->
-        <div class="tabela-responsiva">
+        <div class="ordenacao-responsiva">
+            <label for="ordenacao-pessoas">Ordenar por</label>
+            <select id="ordenacao-pessoas" aria-label="Ordenar pessoas por">
+                <option value="1">Nome</option>
+                <option value="0">Documento</option>
+                <option value="2">Telefone</option>
+                <option value="3">Unidade</option>
+                <option value="4">Setor</option>
+                <option value="5">Andar</option>
+                <option value="6">Paciente</option>
+                <option value="7">Hora de entrada</option>
+                <option value="8">Hora de saída</option>
+                <option value="10">Observação</option>
+            </select>
+        </div>
+
+        <!-- Tabela tradicional em telas largas e cartões em telas menores -->
+        <div class="tabela-responsiva tabela-pessoas-responsiva">
             <table id="tabela-pessoas" th:fragment="tabela">
                 <thead>
                 <tr>
-                    <th>
-                        <button type="button" class="btn-ordenar" onclick="ordenarTabela(0)">Documento ↕</button>
-                    </th>
-                    <th>
-                        <button type="button" class="btn-ordenar" onclick="ordenarTabela(1)">Nome ↕</button>
-                    </th>
-                    <th>
-                        <button type="button" class="btn-ordenar" onclick="ordenarTabela(2)">Telefone ↕</button>
-                    </th>
-                    <th>
-                        <button type="button" class="btn-ordenar" onclick="ordenarTabela(3)">Unidade ↕</button>
-                    </th>
-                    <th>
-                        <button type="button" class="btn-ordenar" onclick="ordenarTabela(4)">Setor ↕</button>
-                    </th>
-                    <th>
-                        <button type="button" class="btn-ordenar" onclick="ordenarTabela(5)">Andar ↕</button>
-                    </th>
-                    <th>
-                        <button type="button" class="btn-ordenar" onclick="ordenarTabela(6)">Paciente ↕</button>
-                    </th>
-                    <th>
-                        <button type="button" class="btn-ordenar" onclick="ordenarTabela(7)">Hora Entrada ↕</button>
-                    </th>
-                    <th>
-                        <button type="button" class="btn-ordenar" onclick="ordenarTabela(8)">Hora Saída ↕</button>
-                    </th>
-                    <th style="text-align: center;">Ação</th>
-                    <th>
-                        <button type="button" class="btn-ordenar" onclick="ordenarTabela(10)">Observação ↕</button>
-                    </th>
-                    <th style="text-align: center;">Histórico</th>
-                    <th style="text-align: center;">Editar</th>
-                    <th style="text-align: center;" sec:authorize="hasAnyRole('SISTEMA', 'GERAL')">Remover</th>
+                    <th><button type="button" class="btn-ordenar" onclick="ordenarTabela(0)">Documento ↕</button></th>
+                    <th><button type="button" class="btn-ordenar" onclick="ordenarTabela(1)">Nome ↕</button></th>
+                    <th><button type="button" class="btn-ordenar" onclick="ordenarTabela(2)">Telefone ↕</button></th>
+                    <th><button type="button" class="btn-ordenar" onclick="ordenarTabela(3)">Unidade ↕</button></th>
+                    <th><button type="button" class="btn-ordenar" onclick="ordenarTabela(4)">Setor ↕</button></th>
+                    <th><button type="button" class="btn-ordenar" onclick="ordenarTabela(5)">Andar ↕</button></th>
+                    <th><button type="button" class="btn-ordenar" onclick="ordenarTabela(6)">Paciente ↕</button></th>
+                    <th><button type="button" class="btn-ordenar" onclick="ordenarTabela(7)">Hora Entrada ↕</button></th>
+                    <th><button type="button" class="btn-ordenar" onclick="ordenarTabela(8)">Hora Saída ↕</button></th>
+                    <th style="text-align: center; color: white; font-weight: 600; padding: 10px 8px;">Ação</th>
+                    <th><button type="button" class="btn-ordenar" onclick="ordenarTabela(10)">Observação ↕</button></th>
+                    <th style="text-align: center; color: white; font-weight: 600; padding: 10px 8px;">Histórico</th>
+                    <th style="text-align: center; color: white; font-weight: 600; padding: 10px 8px;">Editar</th>
+                    <th style="text-align: center; color: white; font-weight: 600; padding: 10px 8px;" sec:authorize="hasAnyRole('SISTEMA', 'GERAL')">Remover</th>
                 </tr>
                 </thead>
                 <tbody>
                 <tr th:each="p : ${pessoas}">
-                    <td th:text="${p.cpf != null && !p.cpf.isBlank() ? p.cpf : p.identidade}"></td>
-                    <td class="font-weight-600" th:text="${p.nome}"></td>
-                    <td th:text="${p.telefone}"></td>
-                    <td th:text="${p.unidade}"></td>
-                    <td th:text="${p.setor}"></td>
-                    <td th:text="${p.andar}"></td>
-                    <td th:text="${p.paciente}"></td>
+                    <td data-label="Documento" th:text="${p.cpf != null && !p.cpf.isBlank() ? p.cpf : p.identidade}"></td>
+                    <td class="font-weight-600" data-label="Nome" th:text="${p.nome}" th:title="${p.nome}"></td>
+                    <td data-label="Telefone" th:text="${p.telefone}"></td>
+                    <td data-label="Unidade" th:text="${p.unidade}"></td>
+                    <td data-label="Setor" th:text="${p.setor}"></td>
+                    <td data-label="Andar" th:text="${p.andar}"></td>
+                    <td data-label="Paciente" th:text="${p.paciente}"></td>
 
                     <!-- Registro em Aberto -->
                     <th:block th:with="reg=${registrosAbertos != null ? registrosAbertos.get(p.id) : null}">
-                        <td th:text="${reg != null ? #temporals.format(reg.dataHoraEntrada, 'dd/MM/yyyy HH:mm') : '-'}"></td>
-                        <td th:text="${reg != null && reg.dataHoraSaida != null ? #temporals.format(reg.dataHoraSaida, 'dd/MM/yyyy HH:mm') : '-'}"></td>
-                        <td style="text-align: center;">
+                        <td data-label="Hora de entrada" th:text="${reg != null ? #temporals.format(reg.horaEntrada, 'dd/MM/yyyy HH:mm') : '-'}"></td>
+                        <td data-label="Hora de saída" th:text="${reg != null && reg.horaSaida != null ? #temporals.format(reg.horaSaida, 'dd/MM/yyyy HH:mm') : '-'}"></td>
+                        <td data-label="Ação" style="text-align: center;">
                             <form th:if="${reg == null}" th:action="@{/registros/entrada}" method="post" style="display:inline;">
                                 <input type="hidden" name="pessoaId" th:value="${p.id}" />
                                 <button type="submit" class="btn-acao btn-entrada">Registrar Entrada</button>
@@ -126,27 +123,27 @@
                     </th:block>
 
                     <!-- Observação com texto expansível -->
-                    <td class="td-obs">
+                    <td class="td-obs" data-label="Observação">
                         <span th:text="${p.observacao != null and #strings.length(p.observacao) > 30 ? #strings.substring(p.observacao, 0, 30) + '...' : p.observacao}"></span>
                         <a href="javascript:void(0)" class="ver-mais" th:if="${p.observacao != null and #strings.length(p.observacao) > 30}"
                            th:data-obs="${p.observacao}" onclick="mostrarObservacaoCompleta(this)">Ver mais</a>
                     </td>
 
                     <!-- Ações -->
-                    <td style="text-align: center;">
+                    <td data-label="Histórico" style="text-align: center;">
                         <a th:href="@{/pessoas/{id}/historico(id=${p.id})}" class="link-acao">Histórico</a>
                     </td>
-                    <td style="text-align: center;">
+                    <td data-label="Editar" style="text-align: center;">
                         <a th:href="@{/pessoas/{id}/editar(id=${p.id})}" class="link-acao">Editar</a>
                     </td>
-                    <td style="text-align: center;" sec:authorize="hasAnyRole('SISTEMA', 'GERAL')">
+                    <td data-label="Remover" style="text-align: center;" sec:authorize="hasAnyRole('SISTEMA', 'GERAL')">
                         <form th:action="@{/pessoas/{id}(id=${p.id})}" th:method="delete" style="display: inline;"
                               onsubmit="return confirm('Tem certeza de que deseja remover permanentemente este cadastro?');">
                             <button type="submit" class="btn-acao btn-remover">Remover</button>
                         </form>
                     </td>
                 </tr>
-                <tr th:if="${pessoas == null || #lists.isEmpty(pessoas)}">
+                <tr class="linha-vazia" th:if="${pessoas == null || #lists.isEmpty(pessoas)}">
                     <td colspan="14" style="text-align: center; padding: 25px; color: #6c757d;">
                         Nenhuma pessoa encontrada.
                     </td>
@@ -203,11 +200,18 @@
         alert("Observação completa:\n\n" + obs);
     }
 
+    const ordenacaoPessoas = document.getElementById('ordenacao-pessoas');
+    if (ordenacaoPessoas) {
+        ordenacaoPessoas.addEventListener('change', function () {
+            ordenarTabela(Number(this.value));
+        });
+    }
+
     let direcaoAsc = true;
     function ordenarTabela(colunaIndex) {
         const table = document.getElementById("tabela-pessoas");
         const tbody = table.querySelector("tbody");
-        const linhas = Array.from(tbody.querySelectorAll("tr"));
+        const linhas = Array.from(tbody.querySelectorAll("tr:not(.linha-vazia)"));
 
         if (linhas.length <= 1) return;
 

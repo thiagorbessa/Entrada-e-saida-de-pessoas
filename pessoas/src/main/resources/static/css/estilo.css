@@ -711,3 +711,1132 @@ textarea.form-control {
 		width: 100%;
 	}
 }
+
+/* ==========================================================================
+   RESPONSIVIDADE — versão consolidada
+   Estratégia:
+   - Pessoas: tabela acima de 1100px; cartões até 1100px.
+   - Usuários: tabela acima de 720px; cartões até 720px.
+   Não há regras duplicadas de display para tabela/cartão.
+   ========================================================================== */
+
+:root {
+	--cor-tabela-borda: #e2e8f0;
+	--cor-tabela-fundo: #ffffff;
+	--cor-tabela-cabecalho: #2c3e50;
+	--sombra-cartao: 0 3px 12px rgba(0, 0, 0, 0.045);
+}
+
+html {
+	width: 100%;
+	min-width: 320px;
+	scroll-behavior: smooth;
+	-webkit-text-size-adjust: 100%;
+	text-size-adjust: 100%;
+}
+
+body {
+	width: 100%;
+	min-width: 320px;
+	min-height: 100vh;
+	min-height: 100dvh;
+	overflow-x: hidden;
+	font-size: clamp(14px, 0.92rem + 0.08vw, 18px);
+}
+
+img, svg, video, canvas, iframe {
+	max-width: 100%;
+}
+
+button, input, select, textarea {
+	max-width: 100%;
+	font: inherit;
+}
+
+.container-principal {
+	width: min(100% - 24px, 1800px);
+	max-width: 1800px;
+	padding-inline: 0;
+	margin: clamp(14px, 2vw, 30px) auto;
+}
+
+.card-tabela,
+.card-formulario,
+.card-login,
+.card-welcome {
+	min-width: 0;
+}
+
+.card-tabela {
+	width: 100%;
+	max-width: 100%;
+	padding: clamp(14px, 2vw, 28px);
+}
+
+/* Preserva limites próprios dos cartões: não deixar o login ocupar a tela toda. */
+.card-formulario {
+	width: min(100%, 900px);
+	max-width: 900px;
+}
+
+.card-login {
+	width: min(calc(100% - 32px), 420px);
+	max-width: 420px;
+	margin: clamp(24px, 5vh, 50px) auto;
+	padding: clamp(22px, 3vw, 35px);
+}
+
+.card-welcome {
+	width: min(100%, 650px);
+	max-width: 650px;
+}
+
+/* A área externa nunca estoura o container. A rolagem horizontal só existe
+   na tabela de desktop quando a quantidade de colunas realmente exigir. */
+.tabela-responsiva {
+	display: block;
+	width: 100%;
+	max-width: 100%;
+	min-width: 0;
+	overflow-x: auto;
+	overflow-y: hidden;
+	-webkit-overflow-scrolling: touch;
+	overscroll-behavior-inline: contain;
+	border: 1px solid var(--cor-tabela-borda);
+	border-radius: 8px;
+	background: var(--cor-tabela-fundo);
+}
+
+.tabela-responsiva table {
+	width: 100%;
+	max-width: none;
+	margin: 0;
+	border-collapse: collapse;
+	table-layout: auto;
+	background: var(--cor-tabela-fundo);
+}
+
+/* Desktop: preserva o display nativo de tabela e não quebra títulos,
+   documentos, telefones, horários ou botões em linhas artificiais. */
+.tabela-pessoas-responsiva table {
+	width: 100%;
+	min-width: 0;
+	max-width: 100%;
+	table-layout: fixed;
+}
+
+/* Em desktop, a tabela usa toda a largura disponível sem criar rolagem lateral.
+   As colunas textuais longas recebem reticências; números e ações ficam inteiros. */
+@media (min-width: 1101px) {
+	.tabela-pessoas-responsiva {
+		overflow-x: hidden;
+		overflow-y: visible;
+	}
+
+	.tabela-pessoas-responsiva th,
+	.tabela-pessoas-responsiva td {
+		min-width: 0;
+		padding: clamp(6px, 0.45vw, 10px) clamp(3px, 0.38vw, 8px);
+		font-size: clamp(0.68rem, 0.72vw, 0.84rem);
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.tabela-pessoas-responsiva th {
+		white-space: nowrap;
+	}
+
+	.tabela-pessoas-responsiva .btn-ordenar {
+		display: block;
+		width: 100%;
+		max-width: 100%;
+		padding: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		font-size: inherit;
+	}
+
+	.tabela-pessoas-responsiva th:nth-child(1),
+	.tabela-pessoas-responsiva td:nth-child(1) { width: 8%; }
+	.tabela-pessoas-responsiva th:nth-child(2),
+	.tabela-pessoas-responsiva td:nth-child(2) { width: 12%; }
+	.tabela-pessoas-responsiva th:nth-child(3),
+	.tabela-pessoas-responsiva td:nth-child(3) { width: 8%; }
+	.tabela-pessoas-responsiva th:nth-child(4),
+	.tabela-pessoas-responsiva td:nth-child(4) { width: 5%; }
+	.tabela-pessoas-responsiva th:nth-child(5),
+	.tabela-pessoas-responsiva td:nth-child(5) { width: 4%; }
+	.tabela-pessoas-responsiva th:nth-child(6),
+	.tabela-pessoas-responsiva td:nth-child(6) { width: 4%; }
+	.tabela-pessoas-responsiva th:nth-child(7),
+	.tabela-pessoas-responsiva td:nth-child(7) { width: 4%; }
+	.tabela-pessoas-responsiva th:nth-child(8),
+	.tabela-pessoas-responsiva td:nth-child(8) { width: 9%; }
+	.tabela-pessoas-responsiva th:nth-child(9),
+	.tabela-pessoas-responsiva td:nth-child(9) { width: 9%; }
+	.tabela-pessoas-responsiva th:nth-child(10),
+	.tabela-pessoas-responsiva td:nth-child(10) { width: 11%; }
+	.tabela-pessoas-responsiva th:nth-child(11),
+	.tabela-pessoas-responsiva td:nth-child(11) { width: 9%; }
+	.tabela-pessoas-responsiva th:nth-child(12),
+	.tabela-pessoas-responsiva td:nth-child(12) { width: 5%; }
+	.tabela-pessoas-responsiva th:nth-child(13),
+	.tabela-pessoas-responsiva td:nth-child(13) { width: 5%; }
+	.tabela-pessoas-responsiva th:nth-child(14),
+	.tabela-pessoas-responsiva td:nth-child(14) { width: 7%; }
+
+	/* Quando o perfil não exibe Remover, redistribui o espaço dessa coluna. */
+	.tabela-pessoas-responsiva table:not(:has(thead th:nth-child(14))) th:nth-child(2),
+	.tabela-pessoas-responsiva table:not(:has(thead th:nth-child(14))) td:nth-child(2) { width: 14%; }
+	.tabela-pessoas-responsiva table:not(:has(thead th:nth-child(14))) th:nth-child(10),
+	.tabela-pessoas-responsiva table:not(:has(thead th:nth-child(14))) td:nth-child(10) { width: 12%; }
+	.tabela-pessoas-responsiva table:not(:has(thead th:nth-child(14))) th:nth-child(11),
+	.tabela-pessoas-responsiva table:not(:has(thead th:nth-child(14))) td:nth-child(11) { width: 10%; }
+	.tabela-pessoas-responsiva table:not(:has(thead th:nth-child(14))) th:nth-child(12),
+	.tabela-pessoas-responsiva table:not(:has(thead th:nth-child(14))) td:nth-child(12) { width: 6%; }
+	.tabela-pessoas-responsiva table:not(:has(thead th:nth-child(14))) th:nth-child(13),
+	.tabela-pessoas-responsiva table:not(:has(thead th:nth-child(14))) td:nth-child(13) { width: 7%; }
+
+	.tabela-pessoas-responsiva tbody td:nth-child(2) {
+		max-width: 0;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.tabela-pessoas-responsiva tbody td.td-obs {
+		max-width: 0;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.tabela-pessoas-responsiva tbody td.td-obs > span:first-child {
+		max-width: calc(100% - 52px);
+	}
+
+	.tabela-pessoas-responsiva tbody td .btn-acao,
+	.tabela-pessoas-responsiva tbody td .link-acao {
+		max-width: 100%;
+		padding: 5px 4px;
+		font-size: clamp(0.64rem, 0.65vw, 0.78rem);
+		white-space: nowrap;
+	}
+}
+
+.tabela-pessoas-responsiva th,
+.tabela-pessoas-responsiva td {
+	padding: 10px 8px;
+	vertical-align: middle;
+	white-space: nowrap;
+	overflow-wrap: normal;
+	word-break: normal;
+}
+
+.tabela-pessoas-responsiva th {
+	background: var(--cor-tabela-cabecalho);
+	color: #fff;
+	font-weight: 600;
+}
+
+.tabela-pessoas-responsiva .btn-ordenar {
+	display: inline-block;
+	width: auto;
+	white-space: nowrap;
+}
+
+/* Nome e observação são os únicos campos textuais que podem ser abreviados
+   na tabela desktop. O HTML mantém o nome completo no title e a observação
+   completa no link "Ver mais". */
+.tabela-pessoas-responsiva tbody td:nth-child(2) {
+	max-width: 230px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.tabela-pessoas-responsiva tbody td.td-obs {
+	max-width: 220px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.tabela-pessoas-responsiva tbody td.td-obs > span:first-child {
+	display: inline-block;
+	max-width: 145px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	vertical-align: bottom;
+}
+
+.tabela-pessoas-responsiva tbody td .btn-acao,
+.tabela-pessoas-responsiva tbody td .link-acao,
+.tabela-pessoas-responsiva tbody td .ver-mais {
+	white-space: nowrap;
+	word-break: normal;
+}
+
+.tabela-pessoas-responsiva tbody td:nth-child(10) form,
+.tabela-pessoas-responsiva tbody td:nth-child(12) form,
+.tabela-pessoas-responsiva tbody td:nth-child(13) form,
+.tabela-pessoas-responsiva tbody td:nth-child(14) form {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	margin: 0;
+	white-space: nowrap;
+}
+
+/* Largura mínima para as seis colunas da gestão de usuários. */
+.tabela-usuarios-responsiva {
+	overflow-x: hidden;
+}
+
+.tabela-usuarios-responsiva table {
+	width: 100%;
+	min-width: 0;
+	max-width: 100%;
+	table-layout: fixed;
+}
+
+.tabela-usuarios-responsiva th:nth-child(1),
+.tabela-usuarios-responsiva td:nth-child(1) { width: 24%; }
+.tabela-usuarios-responsiva th:nth-child(2),
+.tabela-usuarios-responsiva td:nth-child(2) { width: 16%; }
+.tabela-usuarios-responsiva th:nth-child(3),
+.tabela-usuarios-responsiva td:nth-child(3) { width: 18%; }
+.tabela-usuarios-responsiva th:nth-child(4),
+.tabela-usuarios-responsiva td:nth-child(4) { width: 22%; }
+.tabela-usuarios-responsiva th:nth-child(5),
+.tabela-usuarios-responsiva td:nth-child(5) { width: 9%; }
+.tabela-usuarios-responsiva th:nth-child(6),
+.tabela-usuarios-responsiva td:nth-child(6) { width: 11%; }
+
+.tabela-usuarios-responsiva th,
+.tabela-usuarios-responsiva td {
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.tabela-usuarios-responsiva th,
+.tabela-usuarios-responsiva td {
+	padding: 10px 8px;
+	vertical-align: middle;
+	white-space: nowrap;
+	overflow-wrap: normal;
+	word-break: normal;
+}
+
+.tabela-usuarios-responsiva th {
+	background: var(--cor-tabela-cabecalho);
+	color: #fff;
+	font-weight: 600;
+}
+
+.tabela-usuarios-responsiva tbody td:nth-child(1) {
+	max-width: 280px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.tabela-usuarios-responsiva tbody td:nth-child(4) {
+	white-space: normal;
+	min-width: 0;
+	overflow-wrap: anywhere;
+}
+
+.tabela-usuarios-responsiva tbody td .btn-acao,
+.tabela-usuarios-responsiva tbody td .link-acao {
+	white-space: nowrap;
+}
+
+/* O seletor alternativo só aparece quando o cabeçalho da tabela de Pessoas
+   é ocultado no modo de cartões. */
+.ordenacao-responsiva {
+	display: none;
+}
+
+/* DESKTOP — tabela sempre ocupa o espaço disponível sem barra horizontal. */
+@media (min-width: 1101px) {
+	.tabela-pessoas-responsiva {
+		overflow-x: hidden;
+		overflow-y: visible;
+	}
+
+	.tabela-pessoas-responsiva table {
+		width: 100%;
+		min-width: 0;
+		max-width: 100%;
+		table-layout: fixed;
+	}
+
+	.tabela-pessoas-responsiva th,
+	.tabela-pessoas-responsiva td {
+		min-width: 0;
+		padding: clamp(6px, 0.45vw, 10px) clamp(3px, 0.38vw, 8px);
+		font-size: clamp(0.68rem, 0.72vw, 0.84rem);
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.tabela-pessoas-responsiva th {
+		white-space: nowrap;
+	}
+
+	.tabela-pessoas-responsiva .btn-ordenar {
+		display: block;
+		width: 100%;
+		max-width: 100%;
+		padding: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		font-size: inherit;
+	}
+
+	/* Proporções das 14 colunas, incluindo Remover. */
+	.tabela-pessoas-responsiva th:nth-child(1),
+	.tabela-pessoas-responsiva td:nth-child(1) { width: 8%; }
+	.tabela-pessoas-responsiva th:nth-child(2),
+	.tabela-pessoas-responsiva td:nth-child(2) { width: 12%; }
+	.tabela-pessoas-responsiva th:nth-child(3),
+	.tabela-pessoas-responsiva td:nth-child(3) { width: 8%; }
+	.tabela-pessoas-responsiva th:nth-child(4),
+	.tabela-pessoas-responsiva td:nth-child(4) { width: 5%; }
+	.tabela-pessoas-responsiva th:nth-child(5),
+	.tabela-pessoas-responsiva td:nth-child(5) { width: 4%; }
+	.tabela-pessoas-responsiva th:nth-child(6),
+	.tabela-pessoas-responsiva td:nth-child(6) { width: 4%; }
+	.tabela-pessoas-responsiva th:nth-child(7),
+	.tabela-pessoas-responsiva td:nth-child(7) { width: 4%; }
+	.tabela-pessoas-responsiva th:nth-child(8),
+	.tabela-pessoas-responsiva td:nth-child(8) { width: 9%; }
+	.tabela-pessoas-responsiva th:nth-child(9),
+	.tabela-pessoas-responsiva td:nth-child(9) { width: 9%; }
+	.tabela-pessoas-responsiva th:nth-child(10),
+	.tabela-pessoas-responsiva td:nth-child(10) { width: 11%; }
+	.tabela-pessoas-responsiva th:nth-child(11),
+	.tabela-pessoas-responsiva td:nth-child(11) { width: 9%; }
+	.tabela-pessoas-responsiva th:nth-child(12),
+	.tabela-pessoas-responsiva td:nth-child(12) { width: 5%; }
+	.tabela-pessoas-responsiva th:nth-child(13),
+	.tabela-pessoas-responsiva td:nth-child(13) { width: 5%; }
+	.tabela-pessoas-responsiva th:nth-child(14),
+	.tabela-pessoas-responsiva td:nth-child(14) { width: 7%; }
+
+	/* Perfis sem permissão de Remover usam o espaço na coluna Editar e textos. */
+	.tabela-pessoas-responsiva table:not(:has(thead th:nth-child(14))) th:nth-child(2),
+	.tabela-pessoas-responsiva table:not(:has(thead th:nth-child(14))) td:nth-child(2) { width: 14%; }
+	.tabela-pessoas-responsiva table:not(:has(thead th:nth-child(14))) th:nth-child(10),
+	.tabela-pessoas-responsiva table:not(:has(thead th:nth-child(14))) td:nth-child(10) { width: 12%; }
+	.tabela-pessoas-responsiva table:not(:has(thead th:nth-child(14))) th:nth-child(11),
+	.tabela-pessoas-responsiva table:not(:has(thead th:nth-child(14))) td:nth-child(11) { width: 10%; }
+	.tabela-pessoas-responsiva table:not(:has(thead th:nth-child(14))) th:nth-child(12),
+	.tabela-pessoas-responsiva table:not(:has(thead th:nth-child(14))) td:nth-child(12) { width: 6%; }
+	.tabela-pessoas-responsiva table:not(:has(thead th:nth-child(14))) th:nth-child(13),
+	.tabela-pessoas-responsiva table:not(:has(thead th:nth-child(14))) td:nth-child(13) { width: 7%; }
+
+	.tabela-pessoas-responsiva tbody td:nth-child(2),
+	.tabela-pessoas-responsiva tbody td.td-obs {
+		max-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.tabela-pessoas-responsiva tbody td.td-obs > span:first-child {
+		max-width: calc(100% - 52px);
+	}
+
+	.tabela-pessoas-responsiva tbody td .btn-acao {
+		max-width: 100%;
+		padding: 5px 4px;
+		font-size: clamp(0.64rem, 0.65vw, 0.78rem);
+		white-space: nowrap;
+	}
+
+	.tabela-usuarios-responsiva {
+		overflow-x: hidden;
+	}
+
+	.tabela-usuarios-responsiva table {
+		min-width: 0;
+		width: 100%;
+		table-layout: fixed;
+	}
+}
+
+/* PESSOAS — cartões em tablets/celulares (até 1100px). */
+@media (max-width: 1100px) {
+	.tabela-pessoas-responsiva {
+		overflow: visible;
+		border: 0;
+		background: transparent;
+	}
+
+	.tabela-pessoas-responsiva table {
+		display: block;
+		width: 100%;
+		min-width: 0;
+		max-width: 100%;
+		table-layout: auto;
+		border-collapse: separate;
+		border-spacing: 0;
+		background: transparent;
+	}
+
+	.tabela-pessoas-responsiva thead {
+		display: none;
+	}
+
+	.tabela-pessoas-responsiva tbody {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		gap: 14px;
+		width: 100%;
+	}
+
+	.tabela-pessoas-responsiva tbody tr:not(.linha-vazia) {
+		display: block;
+		width: 100%;
+		min-width: 0;
+		margin: 0;
+		padding: 8px 14px;
+		border: 1px solid var(--cor-tabela-borda);
+		border-radius: 11px;
+		background: #fff;
+		box-shadow: var(--sombra-cartao);
+	}
+
+	.tabela-pessoas-responsiva tbody tr:not(.linha-vazia):hover td {
+		background: transparent;
+	}
+
+	.tabela-pessoas-responsiva tbody tr:not(.linha-vazia) > td {
+		display: grid;
+		grid-template-columns: minmax(112px, 34%) minmax(0, 1fr);
+		align-items: start;
+		gap: 12px;
+		width: 100%;
+		min-width: 0;
+		max-width: 100%;
+		padding: 9px 3px;
+		border: 0;
+		border-bottom: 1px solid #edf2f7;
+		border-radius: 0;
+		background: transparent;
+		box-shadow: none;
+		font-size: 0.9rem;
+		line-height: 1.4;
+		text-align: left;
+		vertical-align: top;
+		white-space: normal;
+		overflow-wrap: anywhere;
+		word-break: normal;
+	}
+
+	.tabela-pessoas-responsiva tbody tr:not(.linha-vazia) > td::before {
+		content: attr(data-label);
+		display: block;
+		min-width: 0;
+		color: #526171;
+		font-weight: 700;
+		overflow-wrap: normal;
+		word-break: normal;
+	}
+
+	.tabela-pessoas-responsiva tbody tr:not(.linha-vazia) > td:last-child {
+		border-bottom: 0;
+	}
+
+	/* Campos numéricos e horários ficam em uma linha; se faltar espaço,
+       o cartão aumenta sua altura sem partir cada dígito. */
+	.tabela-pessoas-responsiva tbody tr:not(.linha-vazia) > td:nth-child(1),
+	.tabela-pessoas-responsiva tbody tr:not(.linha-vazia) > td:nth-child(3),
+	.tabela-pessoas-responsiva tbody tr:not(.linha-vazia) > td:nth-child(8),
+	.tabela-pessoas-responsiva tbody tr:not(.linha-vazia) > td:nth-child(9) {
+		white-space: nowrap;
+	}
+
+	.tabela-pessoas-responsiva tbody tr:not(.linha-vazia) > td:nth-child(2) {
+		overflow-wrap: anywhere;
+		white-space: normal;
+	}
+
+	.tabela-pessoas-responsiva tbody tr:not(.linha-vazia) > td.td-obs {
+		white-space: normal;
+		overflow: visible;
+	}
+
+	.tabela-pessoas-responsiva tbody tr:not(.linha-vazia) > td.td-obs > span:first-child {
+		display: inline;
+		max-width: none;
+		white-space: normal;
+		overflow: visible;
+		text-overflow: clip;
+	}
+
+	.tabela-pessoas-responsiva tbody td form {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 6px;
+		min-width: 0;
+		max-width: 100%;
+		margin: 0;
+	}
+
+	.tabela-pessoas-responsiva tbody td .btn-acao,
+	.tabela-pessoas-responsiva tbody td .link-acao,
+	.tabela-pessoas-responsiva tbody td .ver-mais {
+		justify-self: start;
+		max-width: 100%;
+		white-space: nowrap;
+		word-break: normal;
+	}
+
+	.tabela-pessoas-responsiva tbody tr.linha-vazia {
+		display: block;
+		width: 100%;
+		padding: 0;
+		border: 1px solid var(--cor-tabela-borda);
+		border-radius: 10px;
+		background: #fff;
+	}
+
+	.tabela-pessoas-responsiva tbody tr.linha-vazia td {
+		display: block;
+		width: 100%;
+		padding: 20px 12px !important;
+		border: 0;
+		text-align: center !important;
+		white-space: normal;
+	}
+
+	.tabela-pessoas-responsiva tbody tr.linha-vazia td::before {
+		content: none;
+		display: none;
+	}
+
+	.ordenacao-responsiva {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		width: 100%;
+		margin: 0 0 16px;
+	}
+
+	.ordenacao-responsiva label {
+		flex: 0 0 auto;
+		color: #495057;
+		font-size: 0.9rem;
+		font-weight: 600;
+	}
+
+	.ordenacao-responsiva select {
+		flex: 1 1 auto;
+		min-width: 0;
+		min-height: 42px;
+		padding: 8px 10px;
+		border: 1px solid #ced4da;
+		border-radius: 6px;
+		background: #fff;
+		color: #333;
+		font: inherit;
+	}
+}
+
+/* USUÁRIOS — seis colunas cabem em tablet; cartões só em celular (720px). */
+@media (max-width: 720px) {
+	.tabela-usuarios-responsiva {
+		overflow: visible;
+		border: 0;
+		background: transparent;
+	}
+
+	.tabela-usuarios-responsiva table {
+		display: block;
+		width: 100%;
+		min-width: 0;
+		max-width: 100%;
+		border-collapse: separate;
+		border-spacing: 0;
+		background: transparent;
+	}
+
+	.tabela-usuarios-responsiva thead {
+		display: none;
+	}
+
+	.tabela-usuarios-responsiva tbody {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		gap: 12px;
+		width: 100%;
+	}
+
+	.tabela-usuarios-responsiva tbody tr:not(.linha-vazia) {
+		display: block;
+		width: 100%;
+		min-width: 0;
+		margin: 0;
+		padding: 8px 13px;
+		border: 1px solid var(--cor-tabela-borda);
+		border-radius: 11px;
+		background: #fff;
+		box-shadow: var(--sombra-cartao);
+	}
+
+	.tabela-usuarios-responsiva tbody tr:not(.linha-vazia):hover td {
+		background: transparent;
+	}
+
+	.tabela-usuarios-responsiva tbody tr:not(.linha-vazia) > td {
+		display: grid;
+		grid-template-columns: minmax(112px, 38%) minmax(0, 1fr);
+		align-items: start;
+		gap: 10px;
+		width: 100%;
+		min-width: 0;
+		max-width: 100%;
+		padding: 9px 2px;
+		border: 0;
+		border-bottom: 1px solid #edf2f7;
+		background: transparent;
+		font-size: 0.9rem;
+		line-height: 1.4;
+		text-align: left;
+		white-space: normal;
+		overflow-wrap: anywhere;
+		word-break: normal;
+	}
+
+	.tabela-usuarios-responsiva tbody tr:not(.linha-vazia) > td::before {
+		content: attr(data-label);
+		display: block;
+		min-width: 0;
+		color: #526171;
+		font-weight: 700;
+		overflow-wrap: normal;
+	}
+
+	.tabela-usuarios-responsiva tbody tr:not(.linha-vazia) > td:last-child {
+		border-bottom: 0;
+	}
+
+	.tabela-usuarios-responsiva tbody td form {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		min-width: 0;
+		margin: 0;
+	}
+
+	.tabela-usuarios-responsiva tbody td .btn-acao,
+	.tabela-usuarios-responsiva tbody td .link-acao {
+		justify-self: start;
+		white-space: nowrap;
+	}
+
+	.tabela-usuarios-responsiva tbody tr.linha-vazia {
+		display: block;
+		width: 100%;
+		padding: 0;
+		border: 1px solid var(--cor-tabela-borda);
+		border-radius: 10px;
+		background: #fff;
+	}
+
+	.tabela-usuarios-responsiva tbody tr.linha-vazia td {
+		display: block;
+		padding: 20px 12px !important;
+		border: 0;
+		text-align: center !important;
+	}
+
+	.tabela-usuarios-responsiva tbody tr.linha-vazia td::before {
+		content: none;
+		display: none;
+	}
+}
+
+@media (max-width: 480px) {
+	.container-principal {
+		width: calc(100% - 16px);
+		margin-block: 12px;
+	}
+
+	.card-tabela,
+	.card-formulario {
+		padding: 11px;
+		border-radius: 8px;
+	}
+
+	.tabela-pessoas-responsiva tbody tr:not(.linha-vazia) {
+		padding-inline: 10px;
+	}
+
+	.tabela-pessoas-responsiva tbody tr:not(.linha-vazia) > td {
+		grid-template-columns: minmax(96px, 34%) minmax(0, 1fr);
+		gap: 8px;
+		font-size: 0.84rem;
+	}
+
+	.tabela-usuarios-responsiva tbody tr:not(.linha-vazia) > td {
+		grid-template-columns: minmax(100px, 40%) minmax(0, 1fr);
+		gap: 8px;
+		font-size: 0.86rem;
+	}
+
+	.ordenacao-responsiva {
+		align-items: stretch;
+		flex-direction: column;
+		gap: 6px;
+	}
+}
+
+@media (min-width: 1600px) {
+	.container-principal {
+		width: min(94vw, 1800px);
+	}
+
+	.card-tabela {
+		padding: clamp(26px, 2vw, 38px);
+	}
+
+	.tabela-pessoas-responsiva th,
+	.tabela-pessoas-responsiva td {
+		padding: 11px 9px;
+		font-size: 0.9rem;
+	}
+}
+
+@media (min-width: 2200px) {
+	.container-principal {
+		width: min(92vw, 2200px);
+	}
+}
+
+:focus-visible {
+	outline: 3px solid rgba(51, 122, 183, 0.65);
+	outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*, *::before, *::after {
+		scroll-behavior: auto !important;
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+	}
+}
+
+/* =======================================================================
+   AJUSTE FINAL DOS CABEÇALHOS DAS TABELAS
+   Mantém os títulos completos. Os dados longos continuam com reticências.
+   ======================================================================= */
+@media (min-width: 1101px) {
+	/* Cabeçalhos não herdam o ellipsis aplicado às células de dados. */
+	.tabela-pessoas-responsiva thead th {
+		overflow: visible;
+		text-overflow: clip;
+		white-space: normal;
+		vertical-align: middle;
+		text-align: center;
+	}
+
+	.tabela-pessoas-responsiva thead th .btn-ordenar {
+		display: block;
+		width: 100%;
+		max-width: none;
+		min-width: 0;
+		padding: 0;
+		overflow: visible;
+		text-overflow: clip;
+		white-space: normal;
+		overflow-wrap: normal;
+		word-break: normal;
+		line-height: 1.2;
+		text-align: center;
+	}
+
+	/* Distribuição equilibrada: reserva largura para Unidade, Setor,
+       Andar, Paciente e Histórico sem sacrificar os campos de ação. */
+	.tabela-pessoas-responsiva table:has(thead th:nth-child(14)) th:nth-child(1),
+	.tabela-pessoas-responsiva table:has(thead th:nth-child(14)) td:nth-child(1) { width: 8%; }
+	.tabela-pessoas-responsiva table:has(thead th:nth-child(14)) th:nth-child(2),
+	.tabela-pessoas-responsiva table:has(thead th:nth-child(14)) td:nth-child(2) { width: 9%; }
+	.tabela-pessoas-responsiva table:has(thead th:nth-child(14)) th:nth-child(3),
+	.tabela-pessoas-responsiva table:has(thead th:nth-child(14)) td:nth-child(3) { width: 8%; }
+	.tabela-pessoas-responsiva table:has(thead th:nth-child(14)) th:nth-child(4),
+	.tabela-pessoas-responsiva table:has(thead th:nth-child(14)) td:nth-child(4) { width: 6%; }
+	.tabela-pessoas-responsiva table:has(thead th:nth-child(14)) th:nth-child(5),
+	.tabela-pessoas-responsiva table:has(thead th:nth-child(14)) td:nth-child(5) { width: 5%; }
+	.tabela-pessoas-responsiva table:has(thead th:nth-child(14)) th:nth-child(6),
+	.tabela-pessoas-responsiva table:has(thead th:nth-child(14)) td:nth-child(6) { width: 5%; }
+	.tabela-pessoas-responsiva table:has(thead th:nth-child(14)) th:nth-child(7),
+	.tabela-pessoas-responsiva table:has(thead th:nth-child(14)) td:nth-child(7) { width: 6%; }
+	.tabela-pessoas-responsiva table:has(thead th:nth-child(14)) th:nth-child(8),
+	.tabela-pessoas-responsiva table:has(thead th:nth-child(14)) td:nth-child(8) { width: 9%; }
+	.tabela-pessoas-responsiva table:has(thead th:nth-child(14)) th:nth-child(9),
+	.tabela-pessoas-responsiva table:has(thead th:nth-child(14)) td:nth-child(9) { width: 9%; }
+	.tabela-pessoas-responsiva table:has(thead th:nth-child(14)) th:nth-child(10),
+	.tabela-pessoas-responsiva table:has(thead th:nth-child(14)) td:nth-child(10) { width: 10%; }
+	.tabela-pessoas-responsiva table:has(thead th:nth-child(14)) th:nth-child(11),
+	.tabela-pessoas-responsiva table:has(thead th:nth-child(14)) td:nth-child(11) { width: 9%; }
+	.tabela-pessoas-responsiva table:has(thead th:nth-child(14)) th:nth-child(12),
+	.tabela-pessoas-responsiva table:has(thead th:nth-child(14)) td:nth-child(12) { width: 6%; }
+	.tabela-pessoas-responsiva table:has(thead th:nth-child(14)) th:nth-child(13),
+	.tabela-pessoas-responsiva table:has(thead th:nth-child(14)) td:nth-child(13) { width: 5%; }
+	.tabela-pessoas-responsiva table:has(thead th:nth-child(14)) th:nth-child(14),
+	.tabela-pessoas-responsiva table:has(thead th:nth-child(14)) td:nth-child(14) { width: 5%; }
+
+	/* Layout de 13 colunas para perfis sem a permissão Remover. */
+	.tabela-pessoas-responsiva table:not(:has(thead th:nth-child(14))) th:nth-child(1),
+	.tabela-pessoas-responsiva table:not(:has(thead th:nth-child(14))) td:nth-child(1) { width: 8%; }
+	.tabela-pessoas-responsiva table:not(:has(thead th:nth-child(14))) th:nth-child(2),
+	.tabela-pessoas-responsiva table:not(:has(thead th:nth-child(14))) td:nth-child(2) { width: 9%; }
+	.tabela-pessoas-responsiva table:not(:has(thead th:nth-child(14))) th:nth-child(3),
+	.tabela-pessoas-responsiva table:not(:has(thead th:nth-child(14))) td:nth-child(3) { width: 8%; }
+	.tabela-pessoas-responsiva table:not(:has(thead th:nth-child(14))) th:nth-child(4),
+	.tabela-pessoas-responsiva table:not(:has(thead th:nth-child(14))) td:nth-child(4) { width: 6%; }
+	.tabela-pessoas-responsiva table:not(:has(thead th:nth-child(14))) th:nth-child(5),
+	.tabela-pessoas-responsiva table:not(:has(thead th:nth-child(14))) td:nth-child(5) { width: 5%; }
+	.tabela-pessoas-responsiva table:not(:has(thead th:nth-child(14))) th:nth-child(6),
+	.tabela-pessoas-responsiva table:not(:has(thead th:nth-child(14))) td:nth-child(6) { width: 5%; }
+	.tabela-pessoas-responsiva table:not(:has(thead th:nth-child(14))) th:nth-child(7),
+	.tabela-pessoas-responsiva table:not(:has(thead th:nth-child(14))) td:nth-child(7) { width: 6%; }
+	.tabela-pessoas-responsiva table:not(:has(thead th:nth-child(14))) th:nth-child(8),
+	.tabela-pessoas-responsiva table:not(:has(thead th:nth-child(14))) td:nth-child(8) { width: 9%; }
+	.tabela-pessoas-responsiva table:not(:has(thead th:nth-child(14))) th:nth-child(9),
+	.tabela-pessoas-responsiva table:not(:has(thead th:nth-child(14))) td:nth-child(9) { width: 9%; }
+	.tabela-pessoas-responsiva table:not(:has(thead th:nth-child(14))) th:nth-child(10),
+	.tabela-pessoas-responsiva table:not(:has(thead th:nth-child(14))) td:nth-child(10) { width: 10%; }
+	.tabela-pessoas-responsiva table:not(:has(thead th:nth-child(14))) th:nth-child(11),
+	.tabela-pessoas-responsiva table:not(:has(thead th:nth-child(14))) td:nth-child(11) { width: 9%; }
+	.tabela-pessoas-responsiva table:not(:has(thead th:nth-child(14))) th:nth-child(12),
+	.tabela-pessoas-responsiva table:not(:has(thead th:nth-child(14))) td:nth-child(12) { width: 7%; }
+	.tabela-pessoas-responsiva table:not(:has(thead th:nth-child(14))) th:nth-child(13),
+	.tabela-pessoas-responsiva table:not(:has(thead th:nth-child(14))) td:nth-child(13) { width: 9%; }
+
+	/* Na gestão de usuários, libera os títulos e permite quebra entre palavras. */
+	.tabela-usuarios-responsiva thead th {
+		overflow: visible;
+		text-overflow: clip;
+		white-space: normal;
+		line-height: 1.2;
+		text-align: center;
+	}
+}
+
+/* Em monitores largos, os cabeçalhos ficam em uma única linha. */
+@media (min-width: 1600px) {
+	.tabela-pessoas-responsiva thead th .btn-ordenar,
+	.tabela-usuarios-responsiva thead th {
+		white-space: nowrap;
+	}
+}
+
+
+
+/* VER MAIS — botão acessível e clicável, com aparência de link. */
+.tabela-pessoas-responsiva .td-obs .ver-mais {
+	appearance: none;
+	-webkit-appearance: none;
+	display: inline-block;
+	position: relative;
+	z-index: 2;
+	max-width: 100%;
+	margin: 0 0 0 4px;
+	padding: 0;
+	border: 0;
+	border-radius: 0;
+	background: transparent;
+	color: #337ab7;
+	font-family: inherit;
+	font-size: 0.8rem;
+	font-weight: 500;
+	line-height: inherit;
+	text-align: left;
+	text-decoration: underline;
+	white-space: nowrap;
+	cursor: pointer;
+	pointer-events: auto;
+}
+
+.tabela-pessoas-responsiva .td-obs .ver-mais:hover {
+	color: #23527c;
+	text-decoration-thickness: 2px;
+}
+
+.tabela-pessoas-responsiva .td-obs .ver-mais:focus-visible {
+	outline: 2px solid #337ab7;
+	outline-offset: 3px;
+	border-radius: 2px;
+}
+
+
+/* ======================================================================
+   V7 — observação clicável e botão Remover sem corte
+   A estrutura de tabela/cartões e os breakpoints anteriores são preservados.
+   ====================================================================== */
+.tabela-pessoas-responsiva tbody td.td-obs {
+	overflow: visible !important;
+	text-overflow: clip !important;
+	min-width: 0;
+}
+
+.tabela-pessoas-responsiva .obs-inline {
+	display: flex;
+	align-items: center;
+	justify-content: flex-start;
+	gap: 6px;
+	width: 100%;
+	min-width: 0;
+	overflow: visible;
+}
+
+.tabela-pessoas-responsiva .obs-resumo {
+	display: block;
+	flex: 1 1 auto;
+	min-width: 0;
+	max-width: none !important;
+	margin: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	vertical-align: middle;
+}
+
+.tabela-pessoas-responsiva .td-obs .ver-mais {
+	display: inline-flex !important;
+	flex: 0 0 auto;
+	align-items: center;
+	justify-content: center;
+	visibility: visible !important;
+	opacity: 1 !important;
+	position: static;
+	z-index: 3;
+	width: auto;
+	min-width: 52px;
+	max-width: none !important;
+	margin: 0;
+	padding: 3px 1px;
+	border: 0;
+	background: transparent;
+	color: #337ab7;
+	font: inherit;
+	font-size: 0.8rem;
+	line-height: 1.25;
+	text-decoration: underline;
+	white-space: nowrap;
+	cursor: pointer;
+	pointer-events: auto;
+}
+
+.tabela-pessoas-responsiva .td-obs .ver-mais:hover {
+	color: #23527c;
+	text-decoration-thickness: 2px;
+}
+
+/* Mantém o texto do botão integral e impede que o formulário o comprima. */
+.tabela-pessoas-responsiva thead th.th-remover,
+.tabela-pessoas-responsiva tbody td.td-remover {
+	width: 6.5%;
+	min-width: 96px;
+	overflow: visible !important;
+	white-space: nowrap !important;
+	text-overflow: clip !important;
+}
+
+.tabela-pessoas-responsiva tbody td.td-remover form {
+	display: inline-flex !important;
+	flex: 0 0 auto;
+	align-items: center;
+	justify-content: center;
+	flex-wrap: nowrap !important;
+	width: max-content;
+	min-width: 0;
+	max-width: none;
+	margin: 0 auto;
+	white-space: nowrap;
+	overflow: visible;
+}
+
+.tabela-pessoas-responsiva tbody td.td-remover .btn-remover {
+	display: inline-flex !important;
+	flex: 0 0 auto;
+	align-items: center;
+	justify-content: center;
+	width: auto !important;
+	min-width: 90px;
+	max-width: none !important;
+	padding: 7px 11px !important;
+	overflow: visible !important;
+	text-overflow: clip !important;
+	white-space: nowrap !important;
+	text-indent: 0;
+	letter-spacing: normal;
+	line-height: 1.2;
+}
+
+/* Em cartões, a observação fica em duas linhas: resumo e botão abaixo. */
+@media (max-width: 1100px) {
+	.tabela-pessoas-responsiva tbody tr:not(.linha-vazia) > td.td-obs {
+		overflow: visible !important;
+		min-width: 0;
+	}
+
+	.tabela-pessoas-responsiva .obs-inline {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: flex-start;
+		gap: 4px 8px;
+	}
+
+	.tabela-pessoas-responsiva .obs-resumo {
+		flex: 1 1 100%;
+		max-width: 100% !important;
+		white-space: normal;
+		overflow-wrap: anywhere;
+		overflow: visible;
+		text-overflow: clip;
+	}
+
+	.tabela-pessoas-responsiva .td-obs .ver-mais {
+		min-width: 0;
+		min-height: 28px;
+		padding: 2px 0;
+	}
+
+	.tabela-pessoas-responsiva tbody td.td-remover .btn-remover {
+		min-width: 90px;
+	}
+}
+
+
+/* Reequilibra as colunas para reservar espaço real ao botão Remover. */
+@media (min-width: 1101px) {
+	.tabela-pessoas-responsiva table:has(thead th.th-remover) th:nth-child(2),
+	.tabela-pessoas-responsiva table:has(thead th.th-remover) td:nth-child(2) {
+		width: 6.5%;
+	}
+
+	.tabela-pessoas-responsiva table:has(thead th.th-remover) th.th-remover,
+	.tabela-pessoas-responsiva table:has(thead th.th-remover) td.td-remover {
+		width: 7%;
+	}
+
+	.tabela-pessoas-responsiva tbody td.td-remover .btn-remover {
+		min-width: 86px;
+		padding-inline: 9px !important;
+	}
+}
+
+@media (min-width: 1101px) {
+	.tabela-pessoas-responsiva table:has(thead th.th-remover) th:nth-child(1),
+	.tabela-pessoas-responsiva table:has(thead th.th-remover) td:nth-child(1) {
+		width: 7.5%;
+	}
+}
