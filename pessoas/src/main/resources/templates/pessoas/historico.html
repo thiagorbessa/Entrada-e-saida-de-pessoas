@@ -6,7 +6,7 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Histórico de Visitas</title>
   <link rel="stylesheet" th:href="@{/css/estilo.css}"/>
   <style>
@@ -31,7 +31,7 @@
 
 <header>
   <nav>
-    <ul>
+    <ul class="nav-links">
       <li><a th:href="@{/}">Entrada e Saída</a></li>
       <li><a th:href="@{/pessoas}">Listar</a></li>
       <li><a th:href="@{/pessoas/novo}">Novo</a></li>
@@ -41,13 +41,16 @@
       <li sec:authorize="hasRole('ROLE_GERAL')">
         <a th:href="@{/auditoria/logs}">Logs de Auditoria</a>
       </li>
-
-      <li sec:authorize="isAuthenticated()">
-        <form th:action="@{/logout}" method="post" style="display:inline">
-          <button type="submit" style="background:none; border:none; color:white; cursor:pointer;">Sair</button>
-        </form>
-      </li>
     </ul>
+
+    <div class="nav-usuario" sec:authorize="isAuthenticated()">
+      <a th:href="@{/}" class="link-usuario-logado" title="Ir para a página inicial">
+        👤 <span th:text="${usuarioLogado != null ? usuarioLogado.nomeCompleto : #authentication.name}">Usuário</span>
+      </a>
+      <form th:action="@{/logout}" method="post" class="form-logout-inline">
+        <button type="submit" class="btn-logout-link">Sair</button>
+      </form>
+    </div>
   </nav>
 </header>
 

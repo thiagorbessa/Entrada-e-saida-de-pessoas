@@ -6,80 +6,42 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>Logs de Auditoria do Sistema</title>
     <link rel="stylesheet" th:href="@{/css/estilo.css}" />
-    <style>
-        .filtros-container {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 6px;
-            border: 1px solid #ddd;
-        }
-        .filtro-grupo {
-            display: flex;
-            flex-direction: column;
-            flex: 1;
-            min-width: 200px;
-        }
-        .filtro-grupo label {
-            font-weight: bold;
-            margin-bottom: 5px;
-            font-size: 0.9em;
-            color: #333;
-        }
-        .filtro-grupo input, .filtro-grupo select {
-            padding: 8px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            font-size: 0.95em;
-        }
-        .btn-ordenar {
-            cursor: pointer;
-            background: none;
-            border: none;
-            font-weight: bold;
-            color: white;
-            text-align: left;
-            width: 100%;
-            padding: 0;
-        }
-        .btn-ordenar:hover {
-            text-decoration: underline;
-        }
-    </style>
 </head>
 <body>
 <header>
     <nav>
-        <ul>
+        <ul class="nav-links">
             <li><a th:href="@{/}"> Entrada e Saída </a></li>
             <li><a th:href="@{/pessoas}"> Listar </a></li>
             <li><a th:href="@{/pessoas/novo}"> Novo </a></li>
             <li sec:authorize="hasAnyRole('SISTEMA', 'GERAL')">
                 <a th:href="@{/usuarios}"> Cadastro de Usuários </a>
             </li>
-            <li><a th:href="@{/auditoria/logs}" style="font-weight: bold; text-decoration: underline;">Logs de Auditoria</a></li>
-            <li sec:authorize="isAuthenticated()">
-                <form th:action="@{/logout}" method="post" style="display:inline">
-                    <button type="submit" style="background:none; border:none; color:white; cursor:pointer;">Sair</button>
-                </form>
-            </li>
+            <li><a th:href="@{/auditoria/logs}" style="color: #3498db; text-decoration: underline;">Logs de Auditoria</a></li>
         </ul>
+
+        <!-- Bloco do Usuário no Canto Direito -->
+        <div class="nav-usuario" sec:authorize="isAuthenticated()">
+            <a th:href="@{/}" class="link-usuario-logado" title="Ir para a página inicial">
+                👤 <span th:text="${usuarioLogado != null ? usuarioLogado.nomeCompleto : #authentication.name}">Usuário</span>
+            </a>
+            <form th:action="@{/logout}" method="post" class="form-logout-inline">
+                <button type="submit" class="btn-logout-link">Sair</button>
+            </form>
+        </div>
     </nav>
 </header>
 
-<main class="container-principal" style="max-width: 95%;">
-    <div class="card-formulario" style="width: 100%;">
+<main class="container-principal">
+    <div class="card-tabela">
         <div class="titulo-secao">
-            <h1>Logs de Atividade dos Utilizadores (Auditoria)</h1>
+            <h1>Logs de Atividade dos Usuários (Auditoria)</h1>
         </div>
 
         <!-- Área de Filtros -->
         <div class="filtros-container">
             <div class="filtro-grupo">
-                <label for="filtroTexto">Pesquisar Geral (Operador / Registo / Detalhes):</label>
+                <label for="filtroTexto">Pesquisar Geral (Operador / Registro / Detalhes):</label>
                 <input type="text" id="filtroTexto" placeholder="Digite para filtrar..." onkeyup="filtrarTabela()" />
             </div>
 
@@ -103,52 +65,54 @@
             </div>
         </div>
 
-        <table id="tabelaLogs" style="width: 100%; border-collapse: collapse; margin-top: 10px;">
-            <thead>
-            <tr style="background-color: #333; color: white; text-align: left;">
-                <th style="padding: 10px;">
-                    <button class="btn-ordenar" onclick="ordenarTabela(0)">Data/Hora ↕</button>
-                </th>
-                <th style="padding: 10px;">
-                    <button class="btn-ordenar" onclick="ordenarTabela(1)">Operador Responsável ↕</button>
-                </th>
-                <th style="padding: 10px;">
-                    <button class="btn-ordenar" onclick="ordenarTabela(2)">Ação ↕</button>
-                </th>
-                <th style="padding: 10px;">
-                    <button class="btn-ordenar" onclick="ordenarTabela(3)">Registo Afetado ↕</button>
-                </th>
-                <th style="padding: 10px;">Detalhes das Alterações</th>
-            </tr>
-            </thead>
-            <tbody>
-            <tr th:each="log : ${logs}" style="border-bottom: 1px solid #ddd;">
-                <td style="padding: 10px;" th:text="${#temporals.format(log.dataHora, 'yyyy/MM/dd HH:mm:ss')}"></td> <!-- Formato invertido ISO facilita ordenação alfabética por data -->
-                <td style="padding: 10px;">
-                    <strong th:text="${log.usuarioNome}"></strong> <br/>
-                    <small style="color: #666;" th:text="'CPF: ' + ${log.usuarioCpf}"></small>
-                </td>
-                <td style="padding: 10px;">
-                    <span th:if="${log.acao == 'CRIACAO'}" style="color: green; font-weight: bold;">CRIAÇÃO</span>
-                    <span th:if="${log.acao == 'EDICAO'}" style="color: #d9822b; font-weight: bold;">EDIÇÃO</span>
-                    <span th:if="${log.acao == 'EXCLUSAO'}" style="color: red; font-weight: bold;">EXCLUSÃO</span>
-                </td>
-                <td style="padding: 10px;">
-                    <span style="font-size: 0.8em; background: #eee; padding: 2px 6px; border-radius: 4px;" th:text="${log.entidade}"></span><br/>
-                    <strong th:text="${log.entidadeDescricao}"></strong>
-                </td>
-                <td style="padding: 10px; font-family: monospace; font-size: 0.9em;" th:text="${log.detalhes}"></td>
-            </tr>
-            <tr th:if="${#lists.isEmpty(logs)}">
-                <td colspan="5" style="text-align: center; padding: 20px; color: #666;">Nenhum registo de auditoria encontrado.</td>
-            </tr>
-            </tbody>
-        </table>
+        <!-- Div de Rolagem Isolada para a Tabela de Logs (Impede o corte no Mac) -->
+        <div class="tabela-responsiva">
+            <table id="tabelaLogs">
+                <thead>
+                <tr>
+                    <th style="width: 170px;">
+                        <button type="button" class="btn-ordenar" onclick="ordenarTabela(0)">Data/Hora ↕</button>
+                    </th>
+                    <th style="width: 220px;">
+                        <button type="button" class="btn-ordenar" onclick="ordenarTabela(1)">Operador Responsável ↕</button>
+                    </th>
+                    <th style="width: 120px;">
+                        <button type="button" class="btn-ordenar" onclick="ordenarTabela(2)">Ação ↕</button>
+                    </th>
+                    <th style="width: 180px;">
+                        <button type="button" class="btn-ordenar" onclick="ordenarTabela(3)">Registro Afetado ↕</button>
+                    </th>
+                    <th>Detalhes das Alterações</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="log : ${logs}">
+                    <td th:text="${#temporals.format(log.dataHora, 'yyyy/MM/dd HH:mm:ss')}"></td>
+                    <td>
+                        <strong th:text="${log.usuarioNome}"></strong> <br/>
+                        <small style="color: #666;" th:text="'CPF: ' + ${log.usuarioCpf}"></small>
+                    </td>
+                    <td>
+                        <span th:if="${log.acao == 'CRIACAO'}" style="color: green; font-weight: bold;">CRIAÇÃO</span>
+                        <span th:if="${log.acao == 'EDICAO'}" style="color: #d9822b; font-weight: bold;">EDIÇÃO</span>
+                        <span th:if="${log.acao == 'EXCLUSAO'}" style="color: red; font-weight: bold;">EXCLUSÃO</span>
+                    </td>
+                    <td>
+                        <span style="font-size: 0.8em; background: #eee; padding: 2px 6px; border-radius: 4px;" th:text="${log.entidade}"></span><br/>
+                        <strong th:text="${log.entidadeDescricao}"></strong>
+                    </td>
+                    <td style="font-family: monospace; font-size: 0.88rem; word-break: break-word;" th:text="${log.detalhes}"></td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(logs)}">
+                    <td colspan="5" style="text-align: center; padding: 25px; color: #666;">Nenhum registro de auditoria encontrado.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 </main>
 
 <script>
-    // Função de Filtragem em Tempo Real
     function filtrarTabela() {
         const inputTexto = document.getElementById("filtroTexto").value.toLowerCase();
         const filtroAcao = document.getElementById("filtroAcao").value;
@@ -159,7 +123,7 @@
 
         for (let i = 1; i < linhas.length; i++) {
             const linha = linhas[i];
-            if (linha.getElementsByTagName("td").length === 1) continue; // Pula linha de "nenhum registo"
+            if (linha.getElementsByTagName("td").length === 1) continue;
 
             const textoLinha = linha.textContent.toLowerCase();
             const acaoTexto = linha.cells[2].textContent.trim();
@@ -177,14 +141,11 @@
         }
     }
 
-    // Função de Ordenação A/Z e Z/A ao clicar nos cabeçalhos
     let direcaoOrdenacao = {};
     function ordenarTabela(colunaIndex) {
         const tabela = document.getElementById("tabelaLogs");
         let switching = true;
-        let shouldSwitch, i;
 
-        // Alterna direção (ascendente / descendente)
         direcaoOrdenacao[colunaIndex] = !direcaoOrdenacao[colunaIndex];
         let ascendente = direcaoOrdenacao[colunaIndex];
 
@@ -192,8 +153,8 @@
             switching = false;
             const linhas = tabela.rows;
 
-            for (i = 1; i < (linhas.length - 1); i++) {
-                shouldSwitch = false;
+            for (let i = 1; i < (linhas.length - 1); i++) {
+                let shouldSwitch = false;
                 const x = linhas[i].getElementsByTagName("TD")[colunaIndex];
                 const y = linhas[i + 1].getElementsByTagName("TD")[colunaIndex];
 
@@ -205,18 +166,18 @@
                 if (ascendente) {
                     if (valX > valY) {
                         shouldSwitch = true;
+                        linhas[i].parentNode.insertBefore(linhas[i + 1], linhas[i]);
+                        switching = true;
                         break;
                     }
                 } else {
                     if (valX < valY) {
                         shouldSwitch = true;
+                        linhas[i].parentNode.insertBefore(linhas[i + 1], linhas[i]);
+                        switching = true;
                         break;
                     }
                 }
-            }
-            if (shouldSwitch) {
-                linhas[i].parentNode.insertBefore(linhas[i + 1], linhas[i]);
-                switching = true;
             }
         }
     }

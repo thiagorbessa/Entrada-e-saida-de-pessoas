@@ -11,7 +11,7 @@
 <body>
 <header>
 	<nav>
-		<ul>
+		<ul class="nav-links">
 			<li><a th:href="@{/}"> Entrada e Saída </a></li>
 
 			<li sec:authorize="isAuthenticated()">
@@ -29,24 +29,29 @@
 				<a th:href="@{/usuarios}"> Cadastro de Usuários </a>
 			</li>
 
-			<!-- Disponível para TODOS os perfis autenticados -->
+			<!-- Abre a modal popup de alterar senha -->
 			<li sec:authorize="isAuthenticated()">
 				<a href="javascript:void(0);" onclick="abrirModalSenha()">Alterar Senha</a>
 			</li>
-
-			<li sec:authorize="isAuthenticated()">
-				<form th:action="@{/logout}" method="post" class="form-logout-inline">
-					<button type="submit" class="btn-logout-link">Sair</button>
-				</form>
-			</li>
 		</ul>
+
+		<!-- Bloco do Usuário no Canto Direito (Busca o nome direto pelo Repository se usuarioLogado for nulo) -->
+		<div class="nav-usuario" sec:authorize="isAuthenticated()"
+			 th:with="userObj=${usuarioLogado != null ? usuarioLogado : @usuarioRepository.findByCpf(#authentication.name).orElse(null)}">
+			<a th:href="@{/}" class="link-usuario-logado" title="Ir para a página inicial">
+				👤 <span th:text="${userObj != null ? userObj.nomeCompleto : #authentication.name}">Usuário</span>
+			</a>
+			<form th:action="@{/logout}" method="post" class="form-logout-inline">
+				<button type="submit" class="btn-logout-link">Sair</button>
+			</form>
+		</div>
 	</nav>
 </header>
 
 <main class="container-principal">
 	<section>
 		<!-- Bloco de Login para usuários não autenticados -->
-		<div sec:authorize="isAnonymous()" class="card-formulario card-login">
+		<div sec:authorize="isAnonymous()" class="card-login">
 			<div class="titulo-secao text-center">
 				<h1>Acesso ao Sistema</h1>
 			</div>
@@ -71,9 +76,10 @@
 		</div>
 
 		<!-- Mensagem de boas-vindas para usuários autenticados -->
-		<div sec:authorize="isAuthenticated()" class="card-formulario card-welcome">
+		<div sec:authorize="isAuthenticated()" class="card-welcome"
+			 th:with="userObj=${usuarioLogado != null ? usuarioLogado : @usuarioRepository.findByCpf(#authentication.name).orElse(null)}">
 			<h1 class="welcome-title">Seja bem-vindo(a)!</h1>
-			<p class="welcome-text">Olá, <strong sec:authentication="name">Usuário</strong>! Você está autenticado no sistema com sucesso.</p>
+			<p class="welcome-text">Olá, <strong th:text="${userObj != null ? userObj.nomeCompleto : #authentication.name}">Usuário</strong>! Você está autenticado no sistema com sucesso.</p>
 
 			<!-- Mensagens de Feedback de Senha -->
 			<div th:if="${sucesso}" class="alert alert-sucesso">
@@ -89,7 +95,7 @@
 		</div>
 	</section>
 
-	<!-- Modal de Alteração de Senha -->
+	<!-- Modal de Alteração de Senha (fica oculto até clicar em 'Alterar Senha') -->
 	<div id="modalSenha" class="modal">
 		<div class="modal-conteudo">
 			<div class="modal-header">
@@ -120,7 +126,6 @@
 		const loginForm = document.getElementById('loginForm');
 
 		if (cpfInput && loginForm) {
-			// Aplica a máscara visual enquanto o utilizador digita
 			cpfInput.addEventListener('input', e => {
 				let value = e.target.value.replace(/\D/g, '');
 				value = value.replace(/(\d{3})(\d)/, '$1.$2');
@@ -129,7 +134,6 @@
 				e.target.value = value;
 			});
 
-			// ANTES de enviar, removemos os pontos e traços para corresponder ao login no backend
 			loginForm.addEventListener('submit', () => {
 				cpfInput.value = cpfInput.value.replace(/\D/g, '');
 			});
@@ -142,6 +146,14 @@
 		function fecharModalSenha() {
 			document.getElementById('modalSenha').style.display = 'none';
 		}
+
+		// Fecha o modal se o usuário clicar fora do card
+		window.addEventListener('click', function(event) {
+			const modal = document.getElementById('modalSenha');
+			if (event.target === modal) {
+				modal.style.display = 'none';
+			}
+		});
 	</script>
 </main>
 </body>

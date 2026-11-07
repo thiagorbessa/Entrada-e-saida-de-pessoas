@@ -1,0 +1,35 @@
+@echo off
+setlocal
+title Inicializador do Sistema - Entrada e Saida
+
+echo [1/3] Verificando o arquivo JAR da aplicacao...
+REM Altere o caminho abaixo para onde seu jar e gerado (ex: target/sua-app.jar)
+set JAR_FILE=target\entrada-saida-pessoas-0.0.1-SNAPSHOT.jar
+
+if not exist "%JAR_FILE%" (
+    echo O arquivo JAR nao foi encontrado. Tentando compilar com o Maven...
+    call mvn clean package -DskipTests
+    if not exist "%JAR_FILE%" (
+        echo ERRO: Nao foi possivel gerar o arquivo JAR. Verifique o Maven.
+        pause
+        exit /b 1
+    )
+) else (
+    echo Arquivo JAR encontrado com sucesso!
+)
+
+echo [2/3] Verificando o status do Docker e do banco de dados...
+REM Verifica se o volume ou o container do banco ja foi criado antes
+docker volume inspect entrada-saida-pessoas_mysql_data >nul 2>&1
+if %errorlevel% neq 0 (
+    echo Primeira inicializacao detectada: O banco de dados ainda nao existe.
+    echo Criando o ambiente Docker pela primeira vez...
+    docker compose up -d --build
+) else (
+    echo Banco de dados ja existente detectado. Mantendo os dados integros...
+    docker compose up -d
+)
+
+echo [3/3] Sistema pronto e rodando!
+echo Acesse no navegador: http://localhost:8080
+pause
