@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="pt-br"
+      xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width"/>
+  <title>Histórico de Visitas</title>
+  <link rel="stylesheet" th:href="@{/css/estilo.css}"/>
+  <style>
+    .info-auditoria {
+      font-size: 0.85em;
+      color: #666;
+      margin-bottom: 15px;
+      padding: 10px;
+      background-color: #f9f9f9;
+      border-left: 4px solid #ccc;
+    }
+    .badge-operador {
+      display: block;
+      font-size: 0.8em;
+      color: #555;
+      font-style: italic;
+    }
+  </style>
+</head>
+
+<body>
+
+<header>
+  <nav>
+    <ul>
+      <li><a th:href="@{/}">Entrada e Saída</a></li>
+      <li><a th:href="@{/pessoas}">Listar</a></li>
+      <li><a th:href="@{/pessoas/novo}">Novo</a></li>
+      <li sec:authorize="hasAnyRole('SISTEMA', 'GERAL')">
+        <a th:href="@{/usuarios}"> Cadastro de Usuários </a>
+      </li>
+      <li sec:authorize="hasRole('ROLE_GERAL')">
+        <a th:href="@{/auditoria/logs}">Logs de Auditoria</a>
+      </li>
+
+      <li sec:authorize="isAuthenticated()">
+        <form th:action="@{/logout}" method="post" style="display:inline">
+          <button type="submit" style="background:none; border:none; color:white; cursor:pointer;">Sair</button>
+        </form>
+      </li>
+    </ul>
+  </nav>
+</header>
+
+<main>
+
+  <section>
+    <h2 th:with="
+    doc=${!#strings.isEmpty(pessoa.cpf) and !#strings.isEmpty(pessoa.identidade)
+            ? 'CPF: ' + pessoa.cpf + ' | RG: ' + pessoa.identidade
+            : (!#strings.isEmpty(pessoa.cpf)
+                ? 'CPF: ' + pessoa.cpf
+                : (!#strings.isEmpty(pessoa.identidade)
+                    ? 'RG: ' + pessoa.identidade
+                    : 'documento não informado'))}"
+        th:text="'Histórico de ' + ${pessoa.nome} + ' (' + ${doc} + ')'">
+    </h2>
+
+    <div class="info-auditoria" sec:authorize="hasAnyRole('SISTEMA', 'GERAL')">
+      <strong>Cadastro/Última edição por:</strong>
+      <span th:text="${pessoa.usuarioResponsavel != null ? pessoa.usuarioResponsavel.nomeCompleto : 'Sistema (Antigo)'}"></span>
+    </div>
+  </section>
+
+  <section>
+    <table>
+      <thead>
+      <tr>
+        <th>Entrada</th>
+        <th>Saída</th>
+        <th>Unidade</th>
+        <th>Setor</th>
+        <th>Andar</th>
+        <th>Paciente</th>
+        <th sec:authorize="hasAnyRole('SISTEMA', 'GERAL')">Operador Responsável</th>
+      </tr>
+      </thead>
+
+      <tbody>
+      <tr th:each="r : ${registros}">
+        <td>
+          <span th:text="${#temporals.format(r.horaEntrada, 'dd/MM/yyyy HH:mm')}"></span>
+        </td>
+
+        <td>
+          <span th:text="${r.horaSaida == null ? 'Em aberto' : #temporals.format(r.horaSaida, 'dd/MM/yyyy HH:mm')}"></span>
+        </td>
+
+        <td th:text="${r.unidade}"></td>
+        <td th:text="${r.setor}"></td>
+        <td th:text="${r.andar}"></td>
+        <td th:text="${r.paciente}"></td>
+
+        <td sec:authorize="hasAnyRole('SISTEMA', 'GERAL')">
+            <span class="badge-operador">
+                Entrada: <span th:text="${r.usuarioEntrada != null ? r.usuarioEntrada.nomeCompleto : '-'}"></span>
+            </span>
+          <span class="badge-operador" th:if="${r.horaSaida != null}">
+                Saída: <span th:text="${r.usuarioSaida != null ? r.usuarioSaida.nomeCompleto : '-'}"></span>
+            </span>
+        </td>
+      </tr>
+      </tbody>
+    </table>
+
+    <div style="margin-top: 20px;">
+      <a th:href="@{/pessoas}" class="btn-voltar">⬅ Voltar para a listagem</a>
+    </div>
+  </section>
+
+</main>
+
+</body>
+</html>

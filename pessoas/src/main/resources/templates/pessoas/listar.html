@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="pt-br"
+      xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Listar Pessoas</title>
+    <link rel="stylesheet" th:href="@{/css/estilo.css}"/>
+</head>
+
+<body>
+
+<header>
+    <nav>
+        <ul>
+            <li><a th:href="@{/}">Entrada e Saída</a></li>
+            <li><a th:href="@{/pessoas}">Listar</a></li>
+            <li><a th:href="@{/pessoas/novo}">Novo</a></li>
+            <li sec:authorize="hasAnyRole('SISTEMA', 'GERAL')">
+                <a th:href="@{/usuarios}"> Cadastro de Usuários </a>
+            </li>
+            <li sec:authorize="hasRole('ROLE_GERAL')">
+                <a th:href="@{/auditoria/logs}">Logs de Auditoria</a>
+            </li>
+
+            <li sec:authorize="isAuthenticated()">
+                <form th:action="@{/logout}" method="post" class="form-logout-inline">
+                    <button type="submit" class="btn-logout-link">Sair</button>
+                </form>
+            </li>
+        </ul>
+    </nav>
+</header>
+
+<main class="container-principal">
+    <div class="card-tabela">
+        <div class="titulo-secao">
+            <h1>Lista de Pessoas</h1>
+        </div>
+
+        <div class="busca-container">
+            <div class="busca-wrapper">
+                <input type="text"
+                       id="busca"
+                       placeholder="Buscar por nome, CPF, RG ou telefone">
+
+                <a href="#" id="limpar-busca">Limpar</a>
+            </div>
+        </div>
+
+        <table id="tabelaPessoas">
+            <thead>
+            <tr>
+                <th><button type="button" class="btn-ordenar" onclick="ordenarTabela(0)">Documento ↕</button></th>
+                <th><button type="button" class="btn-ordenar" onclick="ordenarTabela(1)">Nome ↕</button></th>
+                <th><button type="button" class="btn-ordenar" onclick="ordenarTabela(2)">Telefone ↕</button></th>
+                <th><button type="button" class="btn-ordenar" onclick="ordenarTabela(3)">Unidade ↕</button></th>
+                <th><button type="button" class="btn-ordenar" onclick="ordenarTabela(4)">Setor ↕</button></th>
+                <th><button type="button" class="btn-ordenar" onclick="ordenarTabela(5)">Andar ↕</button></th>
+                <th><button type="button" class="btn-ordenar" onclick="ordenarTabela(6)">Paciente ↕</button></th>
+                <th><button type="button" class="btn-ordenar" onclick="ordenarTabela(7)">Hora Entrada ↕</button></th>
+                <th><button type="button" class="btn-ordenar" onclick="ordenarTabela(8)">Hora Saída ↕</button></th>
+                <th>Ação</th>
+                <th><button type="button" class="btn-ordenar" onclick="ordenarTabela(10)">Observação ↕</button></th>
+                <th>Histórico</th>
+                <th>Editar</th>
+                <th sec:authorize="hasAnyRole('SISTEMA', 'GERAL')">Remover</th>
+            </tr>
+            </thead>
+
+            <tbody id="tabela-pessoas" th:fragment="tabela">
+            <tr th:each="pessoa : ${pessoas}"
+                th:with="registroAberto=${registrosAbertos != null ? registrosAbertos[pessoa.id] : null}">
+
+                <td th:text="${#strings.isEmpty(pessoa.cpf) ? (#strings.isEmpty(pessoa.identidade) ? 'não preenchido' : pessoa.identidade) : pessoa.cpf}"></td>
+                <td th:text="${pessoa.nome}" class="font-weight-600"></td>
+                <td th:text="${pessoa.telefone}"></td>
+                <td th:text="${pessoa.unidade}"></td>
+                <td th:text="${pessoa.setor}"></td>
+                <td th:text="${pessoa.andar}"></td>
+                <td th:text="${pessoa.paciente}"></td>
+
+                <td th:text="${pessoa.registros == null || pessoa.registros.isEmpty() ? '-' : #temporals.format(pessoa.registros[0].horaEntrada, 'yyyy/MM/dd HH:mm')}"></td>
+                <td th:text="${pessoa.registros == null || pessoa.registros.isEmpty() || pessoa.registros[0].horaSaida == null ? '-' : #temporals.format(pessoa.registros[0].horaSaida, 'yyyy/MM/dd HH:mm')}"></td>
+
+                <td>
+                    <div th:if="${registroAberto == null}">
+                        <form th:action="@{/registros/entrada/{id}(id=${pessoa.id})}" method="post"
+                              onsubmit="return confirm('Confirmar entrada?');">
+                            <button type="submit" class="btn-acao btn-entrada">Registrar Entrada</button>
+                        </form>
+                    </div>
+
+                    <div th:if="${registroAberto != null}">
+                        <form th:action="@{/registros/saida/{id}(id=${registroAberto.id})}" method="post"
+                              onsubmit="return confirm('Confirmar saída?');">
+                            <button type="submit" class="btn-acao btn-saida">Registrar Saída</button>
+                        </form>
+                    </div>
+                </td>
+
+                <td class="td-obs">
+                    <span class="obs-resumo" th:text="${!#strings.isEmpty(pessoa.observacao) and #strings.length(pessoa.observacao) > 40 ? pessoa.observacao.substring(0,40) + '...' : pessoa.observacao}"></span>
+                    <span class="obs-completa" th:text="${pessoa.observacao}" style="display:none;"></span>
+
+                    <a href="#"
+                       th:if="${!#strings.isEmpty(pessoa.observacao) and #strings.length(pessoa.observacao) > 40}"
+                       class="ver-mais">ver mais</a>
+                </td>
+
+                <td>
+                    <a th:href="@{/pessoas/{id}/historico(id=${pessoa.id})}" class="link-acao">Histórico</a>
+                </td>
+
+                <td>
+                    <a th:href="@{/pessoas/{id}/editar(id=${pessoa.id})}" class="link-acao">Editar</a>
+                </td>
+
+                <td sec:authorize="hasAnyRole('SISTEMA', 'GERAL')">
+                    <form th:action="@{/pessoas/{id}(id=${pessoa.id})}" th:method="delete"
+                          onsubmit="return confirm('Tem certeza que deseja remover esta pessoa?')">
+                        <button type="submit" class="btn-acao btn-remover">Remover</button>
+                    </form>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+
+<script>
+    const input = document.getElementById("busca");
+    const tabela = document.getElementById("tabela-pessoas");
+
+    let timeout;
+
+    function atualizarTabela(url) {
+        fetch(url)
+            .then(r => r.text())
+            .then(html => {
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = '<table>' + html + '</table>';
+                const novoTbody = tempDiv.querySelector('tbody');
+
+                if (novoTbody) {
+                    tabela.innerHTML = novoTbody.innerHTML;
+                }
+            })
+            .catch(error => console.error('Erro na busca:', error));
+    }
+
+    input.addEventListener("keyup", () => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => {
+            const termo = encodeURIComponent(input.value);
+            atualizarTabela(`/pessoas/buscar?termo=${termo}`);
+        }, 300);
+    });
+
+    document.getElementById("limpar-busca").addEventListener("click", function(e) {
+        e.preventDefault();
+        input.value = "";
+        atualizarTabela(`/pessoas/buscar?termo=`);
+    });
+
+    document.addEventListener("click", function (e) {
+        if (!e.target.classList.contains("ver-mais")) return;
+
+        e.preventDefault();
+
+        const td = e.target.closest("td");
+        const resumo = td.querySelector(".obs-resumo");
+        const completa = td.querySelector(".obs-completa");
+
+        const expandido = completa.style.display === "block";
+
+        if (expandido) {
+            completa.style.display = "none";
+            resumo.style.display = "inline";
+            e.target.textContent = "ver mais";
+        } else {
+            completa.style.display = "block";
+            resumo.style.display = "none";
+            e.target.textContent = "ver menos";
+        }
+    });
+
+    let direcaoOrdenacao = {};
+    function ordenarTabela(colunaIndex) {
+        let switching = true;
+        let shouldSwitch, i;
+
+        direcaoOrdenacao[colunaIndex] = !direcaoOrdenacao[colunaIndex];
+        let ascendente = direcaoOrdenacao[colunaIndex];
+
+        while (switching) {
+            switching = false;
+            const linhas = tabela.rows;
+
+            for (i = 0; i < (linhas.length - 1); i++) {
+                shouldSwitch = false;
+                const x = linhas[i].getElementsByTagName("TD")[colunaIndex];
+                const y = linhas[i + 1].getElementsByTagName("TD")[colunaIndex];
+
+                if (!x || !y) continue;
+
+                const valX = x.textContent.toLowerCase().trim();
+                const valY = y.textContent.toLowerCase().trim();
+
+                if (ascendente) {
+                    if (valX > valY) {
+                        shouldSwitch = true;
+                        break;
+                    }
+                } else {
+                    if (valX < valY) {
+                        shouldSwitch = true;
+                        break;
+                    }
+                }
+            }
+            if (shouldSwitch) {
+                linhas[i].parentNode.insertBefore(linhas[i + 1], linhas[i]);
+                switching = true;
+            }
+        }
+    }
+</script>
+</body>
+</html>

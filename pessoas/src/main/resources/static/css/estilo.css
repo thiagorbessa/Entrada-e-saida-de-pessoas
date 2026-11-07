@@ -1,0 +1,520 @@
+/* Layout Geral */
+body {
+	font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+	background-color: #f4f6f9;
+	color: #333;
+	margin: 0;
+	padding: 0;
+}
+
+/* Navbar */
+header {
+	background-color: #2c3e50;
+	color: white;
+	padding: 15px 0;
+}
+
+header nav ul {
+	list-style: none;
+	display: flex;
+	justify-content: center;
+	gap: 25px;
+	margin: 0;
+	padding: 0;
+}
+
+header nav ul li a {
+	color: white;
+	text-decoration: none;
+	font-weight: 600;
+	transition: color 0.2s;
+}
+
+header nav ul li a:hover {
+	color: #3498db;
+}
+
+.form-logout-inline {
+	display: inline;
+}
+
+.btn-logout-link {
+	background: none;
+	border: none;
+	color: white;
+	cursor: pointer;
+	font-weight: 600;
+	font-size: 1rem;
+	padding: 0;
+	font-family: inherit;
+}
+
+.btn-logout-link:hover {
+	color: #3498db;
+}
+
+/* Containers */
+.container-principal {
+	max-width: 95%;
+	margin: 30px auto;
+	padding: 0 15px;
+}
+
+.card-formulario {
+	background: #ffffff;
+	padding: 35px 40px;
+	border-radius: 10px;
+	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+}
+
+.card-tabela {
+	background: #ffffff;
+	padding: 30px;
+	border-radius: 10px;
+	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+	overflow-x: auto;
+}
+
+/* Especificidades do Index / Login / Welcome */
+.card-login {
+	max-width: 420px;
+	margin: 40px auto;
+	padding: 35px;
+}
+
+.card-welcome {
+	text-align: center;
+	max-width: 600px;
+	margin: 60px auto;
+	padding: 40px;
+}
+
+.welcome-title {
+	color: #2c3e50;
+	margin-bottom: 15px;
+}
+
+.welcome-text {
+	font-size: 1.1rem;
+	color: #495057;
+}
+
+.welcome-actions {
+	margin-top: 30px;
+	display: flex;
+	justify-content: center;
+	gap: 15px;
+}
+
+.titulo-secao h1 {
+	font-size: 1.6rem;
+	color: #2c3e50;
+	margin-bottom: 25px;
+	border-bottom: 2px solid #eaeaea;
+	padding-bottom: 12px;
+}
+
+/* Alertas */
+.alert {
+	padding: 12px 15px;
+	border-radius: 6px;
+	margin-bottom: 20px;
+	font-size: 0.95rem;
+}
+.alert-erro { background-color: #d9534f; color: white; }
+.alert-aviso { background-color: #f0ad4e; color: white; }
+.alert-sucesso { background-color: #d4edda; color: #155724; }
+
+/* Grid Moderno do Formulário */
+.form-grid {
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	gap: 20px;
+}
+
+.form-group {
+	display: flex;
+	flex-direction: column;
+}
+
+.form-group.full-width {
+	grid-column: span 2;
+}
+
+.form-group-unidades {
+	margin-top: 10px;
+}
+
+.form-group label {
+	font-weight: 600;
+	font-size: 0.9rem;
+	margin-bottom: 8px;
+	color: #495057;
+}
+
+.obrigatorio {
+	color: #d9534f;
+}
+
+/* Inputs e Selects */
+.form-control {
+	width: 100%;
+	padding: 11px 14px;
+	border: 1px solid #ced4da;
+	border-radius: 6px;
+	font-size: 1rem;
+	box-sizing: border-box;
+	transition: border-color 0.2s, box-shadow 0.2s;
+	background-color: #fff;
+}
+
+.form-control:focus {
+	border-color: #337ab7;
+	outline: none;
+	box-shadow: 0 0 6px rgba(51, 122, 183, 0.25);
+}
+
+.input-readonly {
+	background-color: #e9ecef;
+}
+
+textarea.form-control {
+	resize: vertical;
+	min-height: 100px;
+}
+
+.text-error {
+	color: #d9534f;
+	font-weight: 600;
+	margin-top: 5px;
+	display: block;
+}
+
+.text-helper {
+	color: #6c757d;
+	margin-top: 5px;
+}
+
+/* Botões */
+.form-actions {
+	grid-column: span 2;
+	display: flex;
+	gap: 12px;
+	margin-top: 15px;
+}
+
+.btn {
+	padding: 11px 24px;
+	border: none;
+	border-radius: 6px;
+	font-size: 1rem;
+	font-weight: 600;
+	cursor: pointer;
+	transition: background-color 0.2s;
+}
+
+.btn-salvar {
+	background-color: #337ab7;
+	color: white;
+}
+
+.btn-salvar:hover {
+	background-color: #286090;
+}
+
+.btn-limpar {
+	background-color: #6c757d;
+	color: white;
+}
+
+.btn-limpar:hover {
+	background-color: #5a6268;
+}
+
+.btn-block {
+	width: 100%;
+	padding: 12px;
+	font-size: 1rem;
+}
+
+/* Tabelas (Listagem) */
+table {
+	width: 100%;
+	border-collapse: collapse;
+	background: white;
+	margin-top: 15px;
+	white-space: nowrap;
+}
+
+th, td {
+	padding: 12px 15px;
+	text-align: left;
+	border-bottom: 1px solid #eee;
+	font-size: 0.95rem;
+}
+
+th {
+	background-color: #2c3e50;
+	color: white;
+	font-weight: 600;
+}
+
+tr:hover {
+	background-color: #f8f9fa;
+}
+
+/* Utilidades Auxiliares de Espaçamento e Alinhamento */
+.text-center { text-align: center; }
+.text-decoration-none { text-decoration: none; }
+.mb-15 { margin-bottom: 15px; }
+.mb-20 { margin-bottom: 20px; }
+.mb-25 { margin-bottom: 25px; }
+
+/* --- Estilos do Modal de Alteração de Senha --- */
+.modal {
+	display: none;
+	position: fixed;
+	z-index: 1000;
+	left: 0;
+	top: 0;
+	width: 100%;
+	height: 100%;
+	background-color: rgba(0,0,0,0.5);
+	justify-content: center;
+	align-items: center;
+}
+
+.modal-conteudo {
+	background: white;
+	padding: 30px;
+	border-radius: 8px;
+	width: 100%;
+	max-width: 400px;
+	box-shadow: 0px 4px 10px rgba(0,0,0,0.3);
+}
+
+.modal-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 20px;
+}
+
+.modal-header h3 {
+	margin: 0;
+	color: #2c3e50;
+}
+
+.close-btn {
+	background: none;
+	border: none;
+	font-size: 1.5em;
+	cursor: pointer;
+	color: #666;
+}
+
+.close-btn:hover {
+	color: #333;
+}
+
+.modal-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 10px;
+	margin-top: 20px;
+}
+
+/* --- Estilos para os Toggle Switches de Unidades --- */
+.toggle-container {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+	gap: 15px;
+	margin-top: 10px;
+	background-color: #f8f9fa;
+	padding: 15px;
+	border-radius: 6px;
+	border: 1px solid #e9ecef;
+}
+
+.toggle-label {
+	display: flex;
+	align-items: center;
+	cursor: pointer;
+	gap: 10px;
+	font-weight: 500;
+	font-size: 0.95rem;
+	color: #495057;
+	user-select: none;
+}
+
+.switch {
+	position: relative;
+	display: inline-block;
+	width: 48px;
+	height: 24px;
+	flex-shrink: 0;
+}
+
+.switch input {
+	appearance: none;
+	-webkit-appearance: none;
+	position: absolute;
+	opacity: 0;
+	width: 100%;
+	height: 100%;
+	cursor: pointer;
+	z-index: 10;
+	margin: 0;
+	top: 0;
+	left: 0;
+}
+
+.slider {
+	position: absolute;
+	cursor: pointer;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background-color: #ced4da;
+	transition: .3s;
+	border-radius: 24px;
+	z-index: 1;
+}
+
+.slider:before {
+	position: absolute;
+	content: "";
+	height: 18px;
+	width: 18px;
+	left: 3px;
+	bottom: 3px;
+	background-color: white;
+	transition: .3s;
+	border-radius: 50%;
+	box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+	z-index: 2;
+	pointer-events: none;
+}
+
+input:checked + .slider {
+	background-color: #337ab7;
+}
+
+input:checked + .slider:before {
+	transform: translateX(24px);
+}
+/* --- Estilos para a Listagem de Pessoas e Ordenação --- */
+.busca-container {
+	display: flex;
+	justify-content: center;
+	margin-bottom: 25px;
+}
+
+.busca-wrapper {
+	display: flex;
+	gap: 12px;
+	width: 100%;
+	max-width: 600px;
+}
+
+#busca {
+	flex: 1;
+	padding: 11px 16px;
+	font-size: 1rem;
+	border-radius: 6px;
+	border: 1px solid #ced4da;
+	background-color: #fff;
+}
+
+#limpar-busca {
+	align-self: center;
+	text-decoration: none;
+	color: #495057;
+	font-weight: 600;
+	cursor: pointer;
+	padding: 10px 16px;
+	border-radius: 6px;
+	background-color: #e9ecef;
+	transition: background-color 0.2s;
+}
+
+#limpar-busca:hover {
+	background-color: #dde2e6;
+}
+
+.font-weight-600 {
+	font-weight: 600;
+}
+
+.td-obs {
+	max-width: 200px;
+	word-break: break-word;
+}
+
+.ver-mais {
+	display: inline-block;
+	color: #337ab7;
+	font-size: 0.85rem;
+	cursor: pointer;
+	text-decoration: underline;
+	margin-top: 4px;
+}
+
+.link-acao {
+	color: #337ab7;
+	font-weight: 600;
+	text-decoration: none;
+	white-space: nowrap;
+}
+
+.btn-acao {
+	border: none;
+	padding: 6px 12px;
+	border-radius: 4px;
+	cursor: pointer;
+	font-weight: 600;
+	white-space: nowrap;
+	color: white;
+}
+
+.btn-entrada {
+	background-color: #337ab7;
+}
+
+.btn-entrada:hover {
+	background-color: #286090;
+}
+
+.btn-saida {
+	background-color: #f0ad4e;
+}
+
+.btn-saida:hover {
+	background-color: #ec971f;
+}
+
+.btn-remover {
+	background-color: #d9534f;
+}
+
+.btn-remover:hover {
+	background-color: #c9302c;
+}
+
+.btn-ordenar {
+	cursor: pointer;
+	background: none;
+	border: none;
+	font-weight: bold;
+	color: white;
+	text-align: left;
+	width: 100%;
+	padding: 0;
+	font-family: inherit;
+	font-size: inherit;
+}
+
+.btn-ordenar:hover {
+	text-decoration: underline;
+}
