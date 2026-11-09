@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns="http://www.w3.org/1999/xhtml"
+	  xmlns:th="http://www.thymeleaf.org"
+	  xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+	<title>Entrada e saída de pessoas</title>
+	<link rel="stylesheet" th:href="@{/css/estilo.css}" />
+</head>
+<body>
+<header>
+	<nav>
+		<ul class="nav-links">
+			<li><a th:href="@{/}"> Entrada e Saída </a></li>
+
+			<li sec:authorize="isAuthenticated()">
+				<a th:href="@{/pessoas}"> Listar </a>
+			</li>
+			<li sec:authorize="isAuthenticated()">
+				<a th:href="@{/pessoas/novo}"> Novo </a>
+			</li>
+
+			<li sec:authorize="hasRole('ROLE_GERAL')">
+				<a th:href="@{/auditoria/logs}">Logs de Auditoria</a>
+			</li>
+
+			<li sec:authorize="hasAnyRole('SISTEMA', 'GERAL')">
+				<a th:href="@{/usuarios}"> Cadastro de Usuários </a>
+			</li>
+
+			<!-- Abre a modal popup de alterar senha -->
+			<li sec:authorize="isAuthenticated()">
+				<a href="javascript:void(0);" onclick="abrirModalSenha()">Alterar Senha</a>
+			</li>
+		</ul>
+
+		<!-- Bloco do Usuário no Canto Direito (Busca o nome direto pelo Repository se usuarioLogado for nulo) -->
+		<div class="nav-usuario" sec:authorize="isAuthenticated()"
+			 th:with="userObj=${usuarioLogado != null ? usuarioLogado : @usuarioRepository.findByCpf(#authentication.name).orElse(null)}">
+			<a th:href="@{/}" class="link-usuario-logado" title="Ir para a página inicial">
+				👤 <span th:text="${userObj != null ? userObj.nomeCompleto : #authentication.name}">Usuário</span>
+			</a>
+			<form th:action="@{/logout}" method="post" class="form-logout-inline">
+				<button type="submit" class="btn-logout-link">Sair</button>
+			</form>
+		</div>
+	</nav>
+</header>
+
+<main class="container-principal">
+	<section>
+		<!-- Bloco de Login para usuários não autenticados -->
+		<div sec:authorize="isAnonymous()" class="card-login">
+			<div class="titulo-secao text-center">
+				<h1>Acesso ao Sistema</h1>
+			</div>
+
+			<div th:if="${param.error}" class="alert alert-erro text-center">
+				<strong>Usuário ou senha inválidos.</strong>
+			</div>
+
+			<form th:action="@{/login}" method="post" id="loginForm" autocomplete="off">
+				<div class="form-group mb-20">
+					<label>CPF (Login):</label>
+					<input type="text" name="username" id="cpfLogin" placeholder="000.000.000-00" maxlength="14" required class="form-control" autocomplete="off"/>
+				</div>
+
+				<div class="form-group mb-25">
+					<label>Senha:</label>
+					<input type="password" name="password" placeholder="Digite sua senha" required class="form-control" autocomplete="current-password"/>
+				</div>
+
+				<button type="submit" class="btn btn-salvar btn-block">Entrar</button>
+			</form>
+		</div>
+
+		<!-- Mensagem de boas-vindas para usuários autenticados -->
+		<div sec:authorize="isAuthenticated()" class="card-welcome"
+			 th:with="userObj=${usuarioLogado != null ? usuarioLogado : @usuarioRepository.findByCpf(#authentication.name).orElse(null)}">
+			<h1 class="welcome-title">Seja bem-vindo(a)!</h1>
+			<p class="welcome-text">Olá, <strong th:text="${userObj != null ? userObj.nomeCompleto : #authentication.name}">Usuário</strong>! Você está autenticado no sistema com sucesso.</p>
+
+			<!-- Mensagens de Feedback de Senha -->
+			<div th:if="${sucesso}" class="alert alert-sucesso">
+				<p th:text="${sucesso}"></p>
+			</div>
+			<div th:if="${erro}" class="alert alert-erro">
+				<p th:text="${erro}"></p>
+			</div>
+
+			<div class="welcome-actions">
+				<a th:href="@{/pessoas}" class="btn btn-salvar text-decoration-none">Acessar Listagem</a>
+			</div>
+		</div>
+	</section>
+
+	<!-- Modal de Alteração de Senha (fica oculto até clicar em 'Alterar Senha') -->
+	<div id="modalSenha" class="modal">
+		<div class="modal-conteudo">
+			<div class="modal-header">
+				<h3>Alterar Minha Senha</h3>
+				<button type="button" class="close-btn" onclick="fecharModalSenha()">&times;</button>
+			</div>
+			<form th:action="@{/usuarios/alterar-senha-propria}" method="post">
+				<div class="form-group mb-15">
+					<label for="senhaAntiga">Senha Antiga:</label>
+					<input type="password" id="senhaAntiga" name="senhaAntiga" class="form-control" required />
+				</div>
+
+				<div class="form-group mb-20">
+					<label for="senhaNova">Nova Senha:</label>
+					<input type="password" id="senhaNova" name="senhaNova" class="form-control" required />
+				</div>
+
+				<div class="modal-actions">
+					<button type="button" class="btn btn-limpar" onclick="fecharModalSenha()">Cancelar</button>
+					<button type="submit" class="btn btn-salvar">Salvar Alteração</button>
+				</div>
+			</form>
+		</div>
+	</div>
+
+	<script>
+		const cpfInput = document.getElementById('cpfLogin');
+		const loginForm = document.getElementById('loginForm');
+
+		if (cpfInput && loginForm) {
+			cpfInput.addEventListener('input', e => {
+				let value = e.target.value.replace(/\D/g, '');
+				value = value.replace(/(\d{3})(\d)/, '$1.$2');
+				value = value.replace(/(\d{3})(\d)/, '$1.$2');
+				value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+				e.target.value = value;
+			});
+
+			loginForm.addEventListener('submit', () => {
+				cpfInput.value = cpfInput.value.replace(/\D/g, '');
+			});
+		}
+
+		function abrirModalSenha() {
+			document.getElementById('modalSenha').style.display = 'flex';
+		}
+
+		function fecharModalSenha() {
+			document.getElementById('modalSenha').style.display = 'none';
+		}
+
+		// Fecha o modal se o usuário clicar fora do card
+		window.addEventListener('click', function(event) {
+			const modal = document.getElementById('modalSenha');
+			if (event.target === modal) {
+				modal.style.display = 'none';
+			}
+		});
+	</script>
+</main>
+</body>
+</html>

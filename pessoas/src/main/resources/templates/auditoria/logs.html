@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Logs de Auditoria do Sistema</title>
+    <link rel="stylesheet" th:href="@{/css/estilo.css}" />
+</head>
+<body>
+<header>
+    <nav>
+        <ul class="nav-links">
+            <li><a th:href="@{/}"> Entrada e Saída </a></li>
+            <li><a th:href="@{/pessoas}"> Listar </a></li>
+            <li><a th:href="@{/pessoas/novo}"> Novo </a></li>
+            <li sec:authorize="hasAnyRole('SISTEMA', 'GERAL')">
+                <a th:href="@{/usuarios}"> Cadastro de Usuários </a>
+            </li>
+            <li><a th:href="@{/auditoria/logs}" style="color: #3498db; text-decoration: underline;">Logs de Auditoria</a></li>
+        </ul>
+
+        <!-- Bloco do Usuário no Canto Direito -->
+        <div class="nav-usuario" sec:authorize="isAuthenticated()">
+            <a th:href="@{/}" class="link-usuario-logado" title="Ir para a página inicial">
+                👤 <span th:text="${usuarioLogado != null ? usuarioLogado.nomeCompleto : #authentication.name}">Usuário</span>
+            </a>
+            <form th:action="@{/logout}" method="post" class="form-logout-inline">
+                <button type="submit" class="btn-logout-link">Sair</button>
+            </form>
+        </div>
+    </nav>
+</header>
+
+<main class="container-principal">
+    <div class="card-tabela">
+        <div class="titulo-secao">
+            <h1>Logs de Atividade dos Usuários (Auditoria)</h1>
+        </div>
+
+        <!-- Área de Filtros -->
+        <div class="filtros-container">
+            <div class="filtro-grupo">
+                <label for="filtroTexto">Pesquisar Geral (Operador / Registro / Detalhes):</label>
+                <input type="text" id="filtroTexto" placeholder="Digite para filtrar..." onkeyup="filtrarTabela()" />
+            </div>
+
+            <div class="filtro-grupo">
+                <label for="filtroAcao">Filtrar por Ação:</label>
+                <select id="filtroAcao" onchange="filtrarTabela()">
+                    <option value="">Todas as Ações</option>
+                    <option value="CRIAÇÃO">CRIAÇÃO</option>
+                    <option value="EDIÇÃO">EDIÇÃO</option>
+                    <option value="EXCLUSÃO">EXCLUSÃO</option>
+                </select>
+            </div>
+
+            <div class="filtro-grupo">
+                <label for="filtroEntidade">Filtrar por Módulo:</label>
+                <select id="filtroEntidade" onchange="filtrarTabela()">
+                    <option value="">Todos os Módulos</option>
+                    <option value="PESSOA">PESSOA</option>
+                    <option value="USUARIO">USUARIO</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Div de Rolagem Isolada para a Tabela de Logs (Impede o corte no Mac) -->
+        <div class="tabela-responsiva">
+            <table id="tabelaLogs">
+                <thead>
+                <tr>
+                    <th style="width: 170px;">
+                        <button type="button" class="btn-ordenar" onclick="ordenarTabela(0)">Data/Hora ↕</button>
+                    </th>
+                    <th style="width: 220px;">
+                        <button type="button" class="btn-ordenar" onclick="ordenarTabela(1)">Operador Responsável ↕</button>
+                    </th>
+                    <th style="width: 120px;">
+                        <button type="button" class="btn-ordenar" onclick="ordenarTabela(2)">Ação ↕</button>
+                    </th>
+                    <th style="width: 180px;">
+                        <button type="button" class="btn-ordenar" onclick="ordenarTabela(3)">Registro Afetado ↕</button>
+                    </th>
+                    <th>Detalhes das Alterações</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="log : ${logs}">
+                    <td th:text="${#temporals.format(log.dataHora, 'yyyy/MM/dd HH:mm:ss')}"></td>
+                    <td>
+                        <strong th:text="${log.usuarioNome}"></strong> <br/>
+                        <small style="color: #666;" th:text="'CPF: ' + ${log.usuarioCpf}"></small>
+                    </td>
+                    <td>
+                        <span th:if="${log.acao == 'CRIACAO'}" style="color: green; font-weight: bold;">CRIAÇÃO</span>
+                        <span th:if="${log.acao == 'EDICAO'}" style="color: #d9822b; font-weight: bold;">EDIÇÃO</span>
+                        <span th:if="${log.acao == 'EXCLUSAO'}" style="color: red; font-weight: bold;">EXCLUSÃO</span>
+                    </td>
+                    <td>
+                        <span style="font-size: 0.8em; background: #eee; padding: 2px 6px; border-radius: 4px;" th:text="${log.entidade}"></span><br/>
+                        <strong th:text="${log.entidadeDescricao}"></strong>
+                    </td>
+                    <td style="font-family: monospace; font-size: 0.88rem; word-break: break-word;" th:text="${log.detalhes}"></td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(logs)}">
+                    <td colspan="5" style="text-align: center; padding: 25px; color: #666;">Nenhum registro de auditoria encontrado.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</main>
+
+<script>
+    function filtrarTabela() {
+        const inputTexto = document.getElementById("filtroTexto").value.toLowerCase();
+        const filtroAcao = document.getElementById("filtroAcao").value;
+        const filtroEntidade = document.getElementById("filtroEntidade").value;
+
+        const tabela = document.getElementById("tabelaLogs");
+        const linhas = tabela.getElementsByTagName("tr");
+
+        for (let i = 1; i < linhas.length; i++) {
+            const linha = linhas[i];
+            if (linha.getElementsByTagName("td").length === 1) continue;
+
+            const textoLinha = linha.textContent.toLowerCase();
+            const acaoTexto = linha.cells[2].textContent.trim();
+            const entidadeTexto = linha.cells[3].textContent.trim();
+
+            const combinaTexto = textoLinha.includes(inputTexto);
+            const combinaAcao = (filtroAcao === "" || acaoTexto.includes(filtroAcao));
+            const combinaEntidade = (filtroEntidade === "" || entidadeTexto.includes(filtroEntidade));
+
+            if (combinaTexto && combinaAcao && combinaEntidade) {
+                linha.style.display = "";
+            } else {
+                linha.style.display = "none";
+            }
+        }
+    }
+
+    let direcaoOrdenacao = {};
+    function ordenarTabela(colunaIndex) {
+        const tabela = document.getElementById("tabelaLogs");
+        let switching = true;
+
+        direcaoOrdenacao[colunaIndex] = !direcaoOrdenacao[colunaIndex];
+        let ascendente = direcaoOrdenacao[colunaIndex];
+
+        while (switching) {
+            switching = false;
+            const linhas = tabela.rows;
+
+            for (let i = 1; i < (linhas.length - 1); i++) {
+                let shouldSwitch = false;
+                const x = linhas[i].getElementsByTagName("TD")[colunaIndex];
+                const y = linhas[i + 1].getElementsByTagName("TD")[colunaIndex];
+
+                if (!x || !y) continue;
+
+                const valX = x.textContent.toLowerCase().trim();
+                const valY = y.textContent.toLowerCase().trim();
+
+                if (ascendente) {
+                    if (valX > valY) {
+                        shouldSwitch = true;
+                        linhas[i].parentNode.insertBefore(linhas[i + 1], linhas[i]);
+                        switching = true;
+                        break;
+                    }
+                } else {
+                    if (valX < valY) {
+                        shouldSwitch = true;
+                        linhas[i].parentNode.insertBefore(linhas[i + 1], linhas[i]);
+                        switching = true;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+</script>
+</body>
+</html>

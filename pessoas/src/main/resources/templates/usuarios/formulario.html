@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Cadastro de Usuário</title>
+    <link rel="stylesheet" th:href="@{/css/estilo.css}" />
+</head>
+
+<body>
+<header>
+    <nav>
+        <ul class="nav-links">
+            <li><a th:href="@{/}"> Entrada e saída </a></li>
+            <li><a th:href="@{/pessoas}"> Listar Pessoas </a></li>
+            <li><a th:href="@{/usuarios}"> Listar Usuários </a></li>
+            <li sec:authorize="hasAnyRole('SISTEMA', 'GERAL')">
+                <a th:href="@{/usuarios/novo}"> Cadastro de Usuários </a>
+            </li>
+            <li sec:authorize="hasRole('ROLE_GERAL')">
+                <a th:href="@{/auditoria/logs}">Logs de Auditoria</a>
+            </li>
+        </ul>
+
+        <!-- Busca o nome direto pelo Repository caso usuarioLogado não tenha sido enviado -->
+        <div class="nav-usuario" sec:authorize="isAuthenticated()"
+             th:with="userObj=${usuarioLogado != null ? usuarioLogado : @usuarioRepository.findByCpf(#authentication.name).orElse(null)}">
+            <a th:href="@{/}" class="link-usuario-logado" title="Ir para a página inicial">
+                👤 <span th:text="${userObj != null ? userObj.nomeCompleto : #authentication.name}">Usuário</span>
+            </a>
+            <form th:action="@{/logout}" method="post" class="form-logout-inline">
+                <button type="submit" class="btn-logout-link">Sair</button>
+            </form>
+        </div>
+    </nav>
+</header>
+
+<main class="container-principal">
+    <div class="card-formulario">
+        <div class="titulo-secao">
+            <h1 th:text="${usuario.id == null ? 'Cadastro de Usuário' : 'Edição de Usuário'}"></h1>
+        </div>
+
+        <div id="js-erro" class="alert alert-aviso" style="display: none;">
+            <strong id="js-erro-msg"></strong>
+        </div>
+
+        <form th:action="@{/usuarios}" th:object="${usuario}" method="post" id="usuarioForm" class="form-grid" autocomplete="off">
+
+            <input type="hidden" th:field="*{id}" />
+
+            <div class="form-group full-width" th:if="${usuario.id != null}">
+                <label>Código:</label>
+                <input th:field="*{id}" readonly="readonly" class="form-control input-readonly" />
+            </div>
+
+            <div class="form-group full-width">
+                <label>Nome Completo: <span class="obrigatorio">*</span></label>
+                <input th:field="*{nomeCompleto}" required class="form-control" placeholder="Digite o nome do operador" autocomplete="off" />
+                <small th:if="${#fields.hasErrors('nomeCompleto')}" th:errors="*{nomeCompleto}" class="text-error"></small>
+            </div>
+
+            <div class="form-group">
+                <label>CPF (Login): <span class="obrigatorio">*</span></label>
+                <input th:field="*{cpf}" id="cpf" placeholder="000.000.000-00" maxlength="14" required class="form-control" autocomplete="off" />
+                <small th:if="${#fields.hasErrors('cpf')}" th:errors="*{cpf}" class="text-error"></small>
+            </div>
+
+            <div class="form-group">
+                <label>Senha: <span class="obrigatorio" th:if="${usuario.id == null}">*</span></label>
+                <input type="password" th:field="*{senha}" id="senha"
+                       th:required="${usuario.id == null}"
+                       placeholder="Digite a senha de acesso" class="form-control" autocomplete="new-password" />
+                <small th:if="${usuario.id != null}" class="text-helper">
+                    (Deixe em branco para manter a senha atual)
+                </small>
+            </div>
+
+            <!-- Exibido apenas se for Administrador Geral -->
+            <div class="form-group full-width" th:if="${podeEscolherPerfil}">
+                <label>Nível de Acesso: <span class="obrigatorio">*</span></label>
+                <select th:field="*{perfil}" class="form-control" required>
+                    <option value="ROLE_USER">Usuário Comum</option>
+                    <option value="ROLE_SISTEMA">Administrador do Sistema</option>
+                    <option value="ROLE_GERAL">Administrador Geral</option>
+                </select>
+            </div>
+
+            <input type="hidden" th:if="${!podeEscolherPerfil}" name="perfil" value="ROLE_USER" />
+
+            <!-- Seleção de Unidades por Checkboxes com bloqueio dinâmico -->
+            <div class="form-group full-width form-group-unidades">
+                <label><strong>Unidades com Acesso Permitido:</strong></label>
+                <div class="toggle-container">
+                    <div th:each="u : ${T(com.br.entrada.saida.pessoas.model.Unidade).values()}">
+
+                        <th:block th:with="temAcesso=${isGeralLogado or (usuarioLogado != null and usuarioLogado.unidades != null and usuarioLogado.unidades.contains(u))}">
+
+                            <label class="toggle-label" th:style="${temAcesso ? 'cursor: pointer;' : 'cursor: not-allowed; opacity: 0.5;'}"
+                                   th:title="${temAcesso ? '' : 'Você não possui permissão para atribuir esta unidade.'}">
+                                <input type="checkbox"
+                                       th:field="*{unidades}"
+                                       th:value="${u}"
+                                       th:disabled="${!temAcesso}"
+                                       style="width: 18px; height: 18px; accent-color: #337ab7;" />
+                                <span th:text="${u.descricao}">HC1</span>
+                            </label>
+
+                        </th:block>
+
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-actions full-width">
+                <button type="submit" class="btn btn-salvar">Salvar Usuário</button>
+                <button type="button" id="limpar" class="btn btn-limpar">Limpar</button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        const cpfInput = document.getElementById('cpf');
+        const form = document.getElementById('usuarioForm');
+        const jsErroDiv = document.getElementById('js-erro');
+        const jsErroMsg = document.getElementById('js-erro-msg');
+
+        if (cpfInput) {
+            cpfInput.addEventListener('input', e => {
+                let value = e.target.value.replace(/\D/g, '');
+                value = value.replace(/(\d{3})(\d)/, '$1.$2');
+                value = value.replace(/(\d{3})(\d)/, '$1.$2');
+                value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+                e.target.value = value;
+            });
+        }
+
+        function validarCPF(cpf) {
+            cpf = cpf.replace(/[^\d]+/g, '');
+            if (cpf == '' || cpf.length != 11 || /^(\d)\1{10}$/.test(cpf)) return false;
+
+            let add = 0;
+            for (let i = 0; i < 9; i++) {
+                add += parseInt(cpf.charAt(i)) * (10 - i);
+            }
+            let rev = 11 - (add % 11);
+            if (rev == 10 || rev == 11) rev = 0;
+            if (rev != parseInt(cpf.charAt(9))) return false;
+
+            add = 0;
+            for (let i = 0; i < 10; i++) {
+                add += parseInt(cpf.charAt(i)) * (11 - i);
+            }
+            rev = 11 - (add % 11);
+            if (rev == 10 || rev == 11) rev = 0;
+            if (rev != parseInt(cpf.charAt(10))) return false;
+
+            return true;
+        }
+
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                const cpfValue = cpfInput ? cpfInput.value : '';
+                if (cpfValue.length > 0) {
+                    if (!validarCPF(cpfValue)) {
+                        e.preventDefault();
+                        jsErroMsg.textContent = "CPF inválido. Verifique os números.";
+                        jsErroDiv.style.display = 'block';
+                        if (cpfInput) cpfInput.focus();
+                    }
+                }
+            });
+        }
+
+        const btnLimpar = document.getElementById('limpar');
+        if (btnLimpar) {
+            btnLimpar.addEventListener('click', function() {
+                window.location.href = '/usuarios/novo';
+            });
+        }
+    </script>
+</main>
+</body>
+</html>

@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Cadastro de Pessoas</title>
+    <link rel="stylesheet" th:href="@{/css/estilo.css}" />
+</head>
+
+<body>
+<header>
+    <nav>
+        <ul class="nav-links">
+            <li><a th:href="@{/}"> Entrada e Saída </a></li>
+            <li><a th:href="@{/pessoas}"> Listar </a></li>
+            <li><a th:href="@{/pessoas/novo}"> Novo </a></li>
+            <li sec:authorize="hasAnyRole('SISTEMA', 'GERAL')">
+                <a th:href="@{/usuarios}"> Cadastro de Usuários </a>
+            </li>
+            <li sec:authorize="hasRole('ROLE_GERAL')">
+                <a th:href="@{/auditoria/logs}">Logs de Auditoria</a>
+            </li>
+        </ul>
+
+        <div class="nav-usuario" sec:authorize="isAuthenticated()">
+            <a th:href="@{/}" class="link-usuario-logado" title="Ir para a página inicial">
+                👤 <span th:text="${usuarioLogado != null ? usuarioLogado.nomeCompleto : #authentication.name}">Usuário</span>
+            </a>
+            <form th:action="@{/logout}" method="post" class="form-logout-inline">
+                <button type="submit" class="btn-logout-link">Sair</button>
+            </form>
+        </div>
+    </nav>
+</header>
+
+<main class="container-principal">
+    <div class="card-formulario">
+        <div class="titulo-secao">
+            <h1>Cadastro de Pessoas</h1>
+        </div>
+
+        <div id="js-erro" class="alert alert-aviso" style="display: none;">
+            <strong id="js-erro-msg"></strong>
+        </div>
+
+        <form th:action="@{/pessoas}" th:object="${pessoa}" method="post" id="pessoaForm" class="form-grid">
+
+            <input type="hidden" th:field="*{id}" />
+
+            <div class="form-group full-width" th:if="${pessoa.id != null and !#strings.isEmpty(pessoa.id)}">
+                <label>Código: </label>
+                <input type="text" th:value="*{id}" readonly="readonly" class="form-control input-readonly" />
+            </div>
+
+            <div class="form-group">
+                <label>CPF:</label>
+                <input th:field="*{cpf}" id="cpf" placeholder="000.000.000-00" maxlength="14" class="form-control"/>
+                <small th:if="${#fields.hasErrors('cpf')}" th:errors="*{cpf}" class="text-error"></small>
+            </div>
+
+            <div class="form-group">
+                <label>Identidade:</label>
+                <input th:field="*{identidade}" class="form-control"/>
+            </div>
+
+            <div class="form-group full-width">
+                <label>Nome Completo: <span class="obrigatorio">*</span></label>
+                <input th:field="*{nome}" required class="form-control" placeholder="Digite o nome completo" />
+            </div>
+
+            <div class="form-group">
+                <label>Telefone: </label>
+                <input th:field="*{telefone}" id="telefone" placeholder="(00) 00000-0000" class="form-control"/>
+            </div>
+
+            <div class="form-group">
+                <label for="unidade">Unidade: <span class="obrigatorio">*</span></label>
+                <select id="unidade" th:field="*{unidade}" class="form-control" required>
+                    <option value="">Selecione a unidade</option>
+                    <option th:each="u : ${unidadesPermitidas}"
+                            th:value="${u}"
+                            th:text="${u}">
+                    </option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Setor: <span class="obrigatorio">*</span></label>
+                <input th:field="*{setor}" required class="form-control" />
+            </div>
+
+            <div class="form-group">
+                <label>Andar: <span class="obrigatorio">*</span></label>
+                <input th:field="*{andar}" required class="form-control" />
+            </div>
+
+            <div class="form-group full-width">
+                <label>Paciente: <span class="obrigatorio">*</span></label>
+                <input th:field="*{paciente}" required class="form-control" placeholder="Nome do paciente" />
+            </div>
+
+            <div class="form-group full-width">
+                <label for="observacao">Observação:</label>
+                <textarea th:field="*{observacao}" id="observacao" rows="4" class="form-control" placeholder="Informações adicionais..."></textarea>
+            </div>
+
+            <div class="form-actions full-width">
+                <button type="submit" class="btn btn-salvar">Salvar</button>
+                <button type="button" id="limpar" class="btn btn-limpar">Limpar</button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        const cpfInput = document.getElementById('cpf');
+        const telInput = document.getElementById('telefone');
+        const form = document.getElementById('pessoaForm');
+        const jsErroDiv = document.getElementById('js-erro');
+        const jsErroMsg = document.getElementById('js-erro-msg');
+
+        if (cpfInput) {
+            cpfInput.addEventListener('input', e => {
+                let value = e.target.value.replace(/\D/g, '');
+                value = value.replace(/(\d{3})(\d)/, '$1.$2');
+                value = value.replace(/(\d{3})(\d)/, '$1.$2');
+                value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+                e.target.value = value;
+            });
+        }
+
+        if (telInput) {
+            telInput.addEventListener('input', e => {
+                let value = e.target.value.replace(/\D/g, '');
+                value = value.replace(/^(\d{2})(\d)/g, '($1) $2');
+                value = value.replace(/(\d)(\d{4})$/, '$1-$2');
+                e.target.value = value;
+            });
+        }
+
+        function validarCPF(cpf) {
+            cpf = cpf.replace(/[^\d]+/g, '');
+            if (cpf === '' || cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false;
+
+            let add = 0;
+            for (let i = 0; i < 9; i++) {
+                add += parseInt(cpf.charAt(i)) * (10 - i);
+            }
+            let rev = 11 - (add % 11);
+            if (rev === 10 || rev === 11) rev = 0;
+            if (rev !== parseInt(cpf.charAt(9))) return false;
+
+            add = 0;
+            for (let i = 0; i < 10; i++) {
+                add += parseInt(cpf.charAt(i)) * (11 - i);
+            }
+            rev = 11 - (add % 11);
+            if (rev === 10 || rev === 11) rev = 0;
+            if (rev !== parseInt(cpf.charAt(10))) return false;
+
+            return true;
+        }
+
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                const cpfValue = cpfInput ? cpfInput.value : '';
+
+                if (cpfValue.length > 0) {
+                    if (!validarCPF(cpfValue)) {
+                        e.preventDefault();
+                        jsErroMsg.textContent = "O CPF digitado é inválido. Por favor, confira os números.";
+                        jsErroDiv.style.display = 'block';
+                        if (cpfInput) cpfInput.focus();
+                        return;
+                    }
+                }
+            });
+        }
+
+        const btnLimpar = document.getElementById('limpar');
+        if (btnLimpar) {
+            btnLimpar.addEventListener('click', function() {
+                window.location.href = '/pessoas/novo';
+            });
+        }
+    </script>
+</main>
+</body>
+</html>

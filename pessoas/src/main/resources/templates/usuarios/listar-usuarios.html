@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão de Usuários</title>
+    <link rel="stylesheet" th:href="@{/css/estilo.css}">
+    <link rel="stylesheet" href="../../../../../../../estilos-responsivos.css">
+</head>
+<body>
+<header>
+    <nav>
+        <ul class="nav-links">
+            <li><a th:href="@{/}">Entrada e Saída</a></li>
+            <li><a th:href="@{/pessoas}">Listar</a></li>
+            <li><a th:href="@{/pessoas/novo}">Novo</a></li>
+            <li sec:authorize="hasAnyRole('SISTEMA', 'GERAL')">
+                <a th:href="@{/usuarios}">Usuários</a>
+            </li>
+            <li sec:authorize="hasRole('ROLE_GERAL')">
+                <a th:href="@{/auditoria/logs}">Logs de Auditoria</a>
+            </li>
+        </ul>
+
+        <div class="nav-usuario" sec:authorize="isAuthenticated()"
+             th:with="userObj=${usuarioLogado != null ? usuarioLogado : @usuarioRepository.findByCpf(#authentication.name).orElse(null)}">
+            <a th:href="@{/}" class="link-usuario-logado" title="Ir para a página inicial">
+                👤 <span th:text="${userObj != null ? userObj.nomeCompleto : #authentication.name}">Usuário</span>
+            </a>
+            <form th:action="@{/logout}" method="post" class="form-logout-inline">
+                <button type="submit" class="btn-logout-link">Sair</button>
+            </form>
+        </div>
+    </nav>
+</header>
+
+<main class="container-principal">
+    <div class="card-tabela">
+        <div class="titulo-secao">
+            <h1>Gestão de Usuários do Sistema</h1>
+        </div>
+
+        <div class="busca-container-usuarios">
+            <input type="text" id="busca" class="form-control"
+                   placeholder="Buscar por nome ou CPF..." autocomplete="off">
+            <a th:href="@{/usuarios/novo}" class="btn-novo">+ Cadastrar Usuário</a>
+        </div>
+
+        <div class="tabela-responsiva tabela-usuarios-responsiva">
+            <table>
+                <thead>
+                <tr>
+                    <th>Nome Completo</th>
+                    <th>CPF (Login)</th>
+                    <th>Perfil de Acesso</th>
+                    <th>Unidades Permitidas</th>
+                    <th style="text-align: center;">Editar</th>
+                    <th style="text-align: center;">Remover</th>
+                </tr>
+                </thead>
+                <tbody id="tabela-usuarios">
+                <tr th:each="u : ${usuarios}">
+                    <td class="font-weight-600" data-label="Nome Completo" th:text="${u.nomeCompleto}"></td>
+                    <td class="cpf-coluna" data-label="CPF (Login)" th:text="${u.cpf}"></td>
+                    <td data-label="Perfil de Acesso">
+                        <span th:if="${u.perfil == 'ROLE_USER'}" class="badge badge-user">Usuário</span>
+                        <span th:if="${u.perfil == 'ROLE_SISTEMA'}" class="badge badge-sistema">Admin Sistema</span>
+                        <span th:if="${u.perfil == 'ROLE_GERAL'}" class="badge badge-geral">Admin Geral</span>
+                    </td>
+                    <td data-label="Unidades Permitidas">
+                        <span th:each="unidade, iterStat : ${u.unidades}"
+                              th:text="${unidade.descricao + (!iterStat.last ? ', ' : '')}">HC1</span>
+                    </td>
+                    <td data-label="Editar" style="text-align: center;">
+                        <a th:href="@{/usuarios/{id}/editar(id=${u.id})}" class="link-acao">Editar</a>
+                    </td>
+                    <td data-label="Remover" style="text-align: center;">
+                        <form th:action="@{/usuarios/{id}(id=${u.id})}" th:method="delete"
+                              onsubmit="return confirm('Tem certeza que deseja remover este usuário?')">
+                            <button type="submit" class="btn-acao btn-remover">Remover</button>
+                        </form>
+                    </td>
+                </tr>
+                <tr class="linha-vazia" th:if="${usuarios == null || #lists.isEmpty(usuarios)}">
+                    <td colspan="6" style="text-align: center; padding: 25px; color: #6c757d;">
+                        Nenhum usuário cadastrado.
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</main>
+
+<script>
+    const inputBusca = document.getElementById('busca');
+    const tabelaUsuarios = document.getElementById('tabela-usuarios');
+
+    if (inputBusca && tabelaUsuarios) {
+        inputBusca.addEventListener('input', function () {
+            const termo = this.value.trim().toLowerCase();
+            const termoNumerico = termo.replace(/\D/g, '');
+            const linhas = tabelaUsuarios.querySelectorAll('tr:not(.linha-vazia)');
+
+            linhas.forEach(linha => {
+                const nome = linha.children[0]?.textContent.toLowerCase() || '';
+                const cpf = linha.children[1]?.textContent.toLowerCase() || '';
+                const cpfNumerico = cpf.replace(/\D/g, '');
+                const corresponde = nome.includes(termo)
+                    || cpf.includes(termo)
+                    || (termoNumerico && cpfNumerico.includes(termoNumerico));
+                linha.style.display = corresponde ? '' : 'none';
+            });
+        });
+    }
+
+    document.querySelectorAll('.cpf-coluna').forEach(td => {
+        const cpf = td.textContent.replace(/\D/g, '');
+        if (cpf.length === 11) {
+            td.textContent = cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+        }
+    });
+</script>
+</body>
+</html>
