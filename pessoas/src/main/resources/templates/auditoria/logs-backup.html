@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Logs Arquivados do Ano</title>
+    <link rel="stylesheet" th:href="@{/css/estilo.css}" />
+</head>
+<body>
+<header>
+    <nav>
+        <ul class="nav-links">
+            <li><a th:href="@{/}">Início</a></li>
+            <li><a th:href="@{/pessoas}">Listar Pessoas</a></li>
+            <li><a th:href="@{/auditoria/logs}">Logs de Auditoria</a></li>
+            <li><a th:href="@{/auditoria/backup}">Backup de Logs</a></li>
+        </ul>
+    </nav>
+</header>
+
+<main class="container-principal">
+    <div class="card-welcome" style="max-width: 1000px; margin: 30px auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h1 th:text="'Logs Arquivados do Ano: ' + ${ano}"></h1>
+            <a th:href="@{/auditoria/backup(ano=${ano})}" class="btn" style="background-color: #718096; color: #fff; text-decoration: none; padding: 8px 15px; border-radius: 4px;">
+                ← Voltar para Backups
+            </a>
+        </div>
+
+        <!-- Mensagem se não houver logs -->
+        <div th:if="${logs == null or logs.isEmpty()}" class="alert alert-erro">
+            <p>Nenhum log de auditoria encontrado para o ano de <span th:text="${ano}"></span>.</p>
+        </div>
+
+        <!-- Tabela de Logs do Ano -->
+        <div th:if="${logs != null and !logs.isEmpty()}" style="overflow-x: auto;">
+            <table class="tabela-dados" style="width: 100%; border-collapse: collapse;">
+                <thead>
+                <tr>
+                    <th>Data/Hora</th>
+                    <th>CPF Usuário</th>
+                    <th>Nome Usuário</th>
+                    <th>Ação</th>
+                    <th>Entidade</th>
+                    <th>Detalhes</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="log : ${logs}">
+                    <td th:text="${#temporals.format(log.dataHora, 'dd/MM/yyyy HH:mm:ss')}"></td>
+                    <td th:text="${log.usuarioCpf}"></td>
+                    <td th:text="${log.usuarioNome}"></td>
+                    <td th:text="${log.acao}"></td>
+                    <td th:text="${log.entidade}"></td>
+                    <td th:text="${log.detalhes}"></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</main>
+</body>
+</html>

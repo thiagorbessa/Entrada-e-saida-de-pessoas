@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title th:text="'Listagem de Pessoas - Backup ' + ${ano}"></title>
+    <link rel="stylesheet" th:href="@{/css/estilo.css}" />
+</head>
+
+<body>
+<header>
+    <nav>
+        <ul class="nav-links">
+            <li><a th:href="@{/}"> Entrada e Saída </a></li>
+            <li><a th:href="@{/pessoas}"> Listar </a></li>
+            <li><a th:href="@{/auditoria/backup}"> ⬅ Voltar para Seleção de Ano </a></li>
+        </ul>
+    </nav>
+</header>
+
+<main class="container-principal">
+    <div class="card-tabela">
+
+        <div class="titulo-secao">
+            <h1 th:text="'Pessoas Arquivadas - Ano ' + ${ano}"></h1>
+            <p style="color: #666; font-size: 0.9rem;">Modo de consulta de backup (Somente Leitura)</p>
+        </div>
+
+        <div th:if="${erro}" class="alert alert-erro">
+            <span th:text="${erro}"></span>
+        </div>
+
+        <div class="tabela-responsiva tabela-pessoas-responsiva">
+            <table id="tabela-pessoas">
+                <thead>
+                <tr>
+                    <th>Documento</th>
+                    <th>Nome</th>
+                    <th>Telefone</th>
+                    <th>Unidade</th>
+                    <th>Setor</th>
+                    <th>Andar</th>
+                    <th>Paciente</th>
+                    <th style="text-align: center;">Histórico do Ano</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="p : ${pessoas}">
+                    <td data-label="Documento" th:text="${p.cpf != null && !p.cpf.isBlank() ? p.cpf : p.identidade}"></td>
+                    <td class="font-weight-600" data-label="Nome" th:text="${p.nome}"></td>
+                    <td data-label="Telefone" th:text="${p.telefone}"></td>
+                    <td data-label="Unidade" th:text="${p.unidade}"></td>
+                    <td data-label="Setor" th:text="${p.setor}"></td>
+                    <td data-label="Andar" th:text="${p.andar}"></td>
+                    <td data-label="Paciente" th:text="${p.paciente}"></td>
+
+                    <!-- Botão de Histórico direcionando para o ano específico do backup -->
+                    <td data-label="Histórico" style="text-align: center;">
+                        <a th:href="@{/auditoria/backup/historico(id=${p.id}, ano=${ano})}" class="link-acao">Ver Histórico</a>
+                    </td>
+                </tr>
+                <tr class="linha-vazia" th:if="${pessoas == null || #lists.isEmpty(pessoas)}">
+                    <td colspan="8" style="text-align: center; padding: 25px; color: #6c757d;">
+                        Nenhuma pessoa encontrada no backup deste ano.
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div style="margin-top: 25px;">
+            <a th:href="@{/auditoria/backup(ano=${ano})}" class="btn btn-limpar" style="text-decoration: none; display: inline-flex; width: auto;">⬅ Voltar para Backup</a>
+        </div>
+    </div>
+</main>
+</body>
+</html>

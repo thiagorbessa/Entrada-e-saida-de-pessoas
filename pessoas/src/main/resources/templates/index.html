@@ -25,6 +25,11 @@
 				<a th:href="@{/auditoria/logs}">Logs de Auditoria</a>
 			</li>
 
+			<!-- ADICIONADO: Link de Backups visível apenas para Administrador Geral -->
+			<li sec:authorize="hasRole('ROLE_GERAL')">
+				<a th:href="@{/auditoria/backup}">Backups</a>
+			</li>
+
 			<li sec:authorize="hasAnyRole('SISTEMA', 'GERAL')">
 				<a th:href="@{/usuarios}"> Cadastro de Usuários </a>
 			</li>
@@ -35,7 +40,7 @@
 			</li>
 		</ul>
 
-		<!-- Bloco do Usuário no Canto Direito (Busca o nome direto pelo Repository se usuarioLogado for nulo) -->
+		<!-- Bloco do Usuário no Canto Direito -->
 		<div class="nav-usuario" sec:authorize="isAuthenticated()"
 			 th:with="userObj=${usuarioLogado != null ? usuarioLogado : @usuarioRepository.findByCpf(#authentication.name).orElse(null)}">
 			<a th:href="@{/}" class="link-usuario-logado" title="Ir para a página inicial">
@@ -81,7 +86,6 @@
 			<h1 class="welcome-title">Seja bem-vindo(a)!</h1>
 			<p class="welcome-text">Olá, <strong th:text="${userObj != null ? userObj.nomeCompleto : #authentication.name}">Usuário</strong>! Você está autenticado no sistema com sucesso.</p>
 
-			<!-- Mensagens de Feedback de Senha -->
 			<div th:if="${sucesso}" class="alert alert-sucesso">
 				<p th:text="${sucesso}"></p>
 			</div>
@@ -95,7 +99,7 @@
 		</div>
 	</section>
 
-	<!-- Modal de Alteração de Senha (fica oculto até clicar em 'Alterar Senha') -->
+	<!-- Modal de Alteração de Senha -->
 	<div id="modalSenha" class="modal">
 		<div class="modal-conteudo">
 			<div class="modal-header">
@@ -147,7 +151,6 @@
 			document.getElementById('modalSenha').style.display = 'none';
 		}
 
-		// Fecha o modal se o usuário clicar fora do card
 		window.addEventListener('click', function(event) {
 			const modal = document.getElementById('modalSenha');
 			if (event.target === modal) {

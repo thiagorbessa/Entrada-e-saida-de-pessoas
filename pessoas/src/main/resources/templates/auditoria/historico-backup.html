@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Histórico de Visitas - Backup</title>
+    <link rel="stylesheet" th:href="@{/css/estilo.css}"/>
+</head>
+
+<body>
+<header>
+    <nav>
+        <ul class="nav-links">
+            <li><a th:href="@{/}">Início</a></li>
+            <li><a th:href="@{/auditoria/backup}">Voltar para Backups</a></li>
+        </ul>
+    </nav>
+</header>
+
+<main class="container-principal" style="padding: 20px;">
+
+    <section>
+        <h2 th:text="'Histórico Arquivado (' + ${ano} + ') de ' + ${pessoa.nome}"></h2>
+    </section>
+
+    <section class="card-tabela" style="margin-top: 20px; padding: 25px;">
+        <div class="tabela-responsiva">
+            <table>
+                <thead>
+                <tr>
+                    <th>Entrada</th>
+                    <th>Saída</th>
+                    <th>Unidade</th>
+                    <th>Setor</th>
+                    <th>Andar</th>
+                    <th>Paciente</th>
+                    <th>Operador Responsável</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="r : ${registros}">
+                    <td th:text="${r.horaEntrada != null ? #temporals.format(r.horaEntrada, 'dd/MM/yyyy HH:mm') : '-'}"></td>
+                    <td th:text="${r.horaSaida == null ? 'Em aberto' : #temporals.format(r.horaSaida, 'dd/MM/yyyy HH:mm')}"></td>
+                    <td th:text="${r.unidade}"></td>
+                    <td th:text="${r.setor}"></td>
+                    <td th:text="${r.andar}"></td>
+                    <td th:text="${r.paciente}"></td>
+                    <td>
+                        <span th:text="${r.operadorEntradaNome != null ? r.operadorEntradaNome : '-'}">Operador</span><br/>
+                        <small style="color: #666;" th:text="${r.operadorSaidaNome != null ? 'Saída: ' + r.operadorSaidaNome : ''}"></small>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(registros)}">
+                    <td colspan="7" style="text-align: center; padding: 25px; color: #6c757d;">
+                        Nenhum registro de visita encontrado neste ano de backup para esta pessoa.
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div style="margin-top: 25px;">
+            <a th:href="@{/auditoria/backup/pessoas(ano=${ano})}" class="btn btn-limpar" style="text-decoration: none; display: inline-flex; width: auto;">⬅ Voltar para a lista do ano</a>
+        </div>
+    </section>
+
+</main>
+</body>
+</html>

@@ -46,4 +46,22 @@ public class Registro {
     @ManyToOne
     @JoinColumn(name = "pessoa_id")
     private Pessoa pessoa;
+
+    // ==========================================
+    // MÉTODOS DE CONVENIÊNCIA PARA O HISTÓRICO
+    // ==========================================
+
+    public String getOperadorEntradaNome() {
+        if (usuarioEntrada != null && usuarioEntrada.getNomeCompleto() != null) {
+            return usuarioEntrada.getNomeCompleto();
+        }
+        return "-";
+    }
+
+    public String getOperadorSaidaNome() {
+        if (usuarioSaida != null && usuarioSaida.getNomeCompleto() != null) {
+            return usuarioSaida.getNomeCompleto();
+        }
+        return "-";
+    }
 }
