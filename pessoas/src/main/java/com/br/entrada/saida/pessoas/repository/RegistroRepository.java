@@ -1,8 +1,11 @@
 package com.br.entrada.saida.pessoas.repository;
 
 import com.br.entrada.saida.pessoas.model.Registro;
+<<<<<<< HEAD
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+=======
+>>>>>>> 83f1b7ba020a81546cd0af66f461e3ffad2f4e70
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -18,7 +21,10 @@ public interface RegistroRepository extends JpaRepository<Registro, UUID> {
     Optional<Registro> findByPessoaIdAndHoraSaidaIsNull(UUID pessoaId);
 
     List<Registro> findByHoraSaidaIsNull();
+<<<<<<< HEAD
 
     // NOVO: Método paginado para buscar o histórico de registros da pessoa ordenado do mais recente para o mais antigo
     Page<Registro> findByPessoaIdOrderByHoraEntradaDesc(UUID pessoaId, Pageable pageable);
+=======
+>>>>>>> 83f1b7ba020a81546cd0af66f461e3ffad2f4e70
 }

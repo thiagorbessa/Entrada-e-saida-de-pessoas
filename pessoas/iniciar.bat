@@ -15,4 +15,8 @@ if %errorlevel% neq 0 (
 
 echo [2/2] Sistema pronto e rodando no Docker!
 echo Acesse no navegador: http://localhost:8080
+<<<<<<< HEAD
 pause
+=======
+pause
+>>>>>>> 83f1b7ba020a81546cd0af66f461e3ffad2f4e70

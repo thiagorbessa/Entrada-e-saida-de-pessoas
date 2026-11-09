@@ -5,16 +5,23 @@ import com.br.entrada.saida.pessoas.model.Usuario;
 import com.br.entrada.saida.pessoas.repository.UsuarioRepository;
 import com.br.entrada.saida.pessoas.service.AuditoriaService;
 import lombok.RequiredArgsConstructor;
+<<<<<<< HEAD
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
+=======
+>>>>>>> 83f1b7ba020a81546cd0af66f461e3ffad2f4e70
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 import java.security.Principal;
+<<<<<<< HEAD
+=======
+import java.util.List;
+>>>>>>> 83f1b7ba020a81546cd0af66f461e3ffad2f4e70
 
 @Controller
 @RequestMapping("/auditoria")
@@ -30,15 +37,20 @@ public class AuditoriaController {
     }
 
     @GetMapping("/logs")
+<<<<<<< HEAD
     public String verLogs(
             @PageableDefault(page = 0, size = 100, sort = "dataHora", direction = Sort.Direction.DESC) Pageable pageable,
             Model model, Principal principal) {
 
+=======
+    public String verLogs(Model model, Principal principal) {
+>>>>>>> 83f1b7ba020a81546cd0af66f461e3ffad2f4e70
         Usuario usuario = obterUsuarioLogado(principal);
         if (usuario == null || !"ROLE_GERAL".equals(usuario.getPerfil())) {
             return "redirect:/pessoas"; // Acesso restrito apenas ao Administrador Geral
         }
 
+<<<<<<< HEAD
         Page<LogAuditoria> paginaLogs = auditoriaService.listarTodosPaginados(pageable);
 
         model.addAttribute("logs", paginaLogs.getContent());
@@ -48,6 +60,11 @@ public class AuditoriaController {
         model.addAttribute("totalItems", paginaLogs.getTotalElements());
         model.addAttribute("usuarioLogado", usuario);
 
+=======
+        List<LogAuditoria> logs = auditoriaService.listarTodos();
+        model.addAttribute("logs", logs);
+        model.addAttribute("usuarioLogado", usuario);
+>>>>>>> 83f1b7ba020a81546cd0af66f461e3ffad2f4e70
         return "auditoria/logs";
     }
 }

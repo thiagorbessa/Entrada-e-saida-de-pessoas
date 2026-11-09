@@ -7,8 +7,11 @@ import com.br.entrada.saida.pessoas.model.Usuario;
 import com.br.entrada.saida.pessoas.repository.PessoaRepository;
 import com.br.entrada.saida.pessoas.repository.RegistroRepository;
 import lombok.RequiredArgsConstructor;
+<<<<<<< HEAD
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+=======
+>>>>>>> 83f1b7ba020a81546cd0af66f461e3ffad2f4e70
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -75,10 +78,13 @@ public class RegistroService {
     public Optional<Registro> buscarRegistroAbertoPorPessoa(UUID pessoaId) {
         return registroRepository.findByPessoaIdAndHoraSaidaIsNull(pessoaId);
     }
+<<<<<<< HEAD
 
     // NOVO: Método para buscar o histórico de registros da pessoa de forma paginada
     @Transactional(readOnly = true)
     public Page<Registro> buscarHistoricoPorPessoaPaginado(UUID pessoaId, Pageable pageable) {
         return registroRepository.findByPessoaIdOrderByHoraEntradaDesc(pessoaId, pageable);
     }
+=======
+>>>>>>> 83f1b7ba020a81546cd0af66f461e3ffad2f4e70
 }
