@@ -11,13 +11,10 @@ import com.br.entrada.saida.pessoas.service.PessoaService;
 import com.br.entrada.saida.pessoas.service.RegistroService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-<<<<<<< HEAD
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
-=======
->>>>>>> 83f1b7ba020a81546cd0af66f461e3ffad2f4e70
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -62,7 +59,6 @@ public class PessoaController {
 		model.addAttribute("usuarioLogado", usuarioLogado);
 	}
 
-<<<<<<< HEAD
 	// Listagem principal configurada para exibir 100 pessoas por página
 	@GetMapping
 	public String listar(
@@ -78,13 +74,6 @@ public class PessoaController {
 		model.addAttribute("currentPage", pageable.getPageNumber());
 		model.addAttribute("totalPages", paginaPessoas.getTotalPages());
 		model.addAttribute("totalItems", paginaPessoas.getTotalElements());
-=======
-	@GetMapping
-	public String listar(Model model, Principal principal) {
-		Usuario usuarioLogado = obterUsuarioLogado(principal);
-		List<Pessoa> pessoas = pessoaService.listarPorUsuario(usuarioLogado);
-		model.addAttribute("pessoas", pessoas);
->>>>>>> 83f1b7ba020a81546cd0af66f461e3ffad2f4e70
 
 		Map<UUID, Registro> registrosAbertos = new HashMap<>();
 		if (pessoas != null) {
@@ -100,10 +89,6 @@ public class PessoaController {
 		return "pessoas/listar";
 	}
 
-<<<<<<< HEAD
-	// Busca que varre toda a base filtrada pelo termo digitado
-=======
->>>>>>> 83f1b7ba020a81546cd0af66f461e3ffad2f4e70
 	@GetMapping("/buscar")
 	public String buscar(@RequestParam(value = "termo", required = false) String termo, Model model, Principal principal) {
 		Usuario usuarioLogado = obterUsuarioLogado(principal);
@@ -171,10 +156,6 @@ public class PessoaController {
 		Usuario usuarioLogado = obterUsuarioLogado(principal);
 		Pessoa pessoa = pessoaService.buscarPorId(id);
 
-<<<<<<< HEAD
-=======
-		// Bloqueia a abertura se o usuário comum não tiver permissão na unidade da pessoa
->>>>>>> 83f1b7ba020a81546cd0af66f461e3ffad2f4e70
 		if (!pessoaService.isAdmin(usuarioLogado)) {
 			if (pessoa.getUnidade() != null &&
 					(usuarioLogado == null || usuarioLogado.getUnidades() == null || !usuarioLogado.getUnidades().contains(pessoa.getUnidade()))) {
@@ -200,12 +181,11 @@ public class PessoaController {
 		return "pessoas/formulario";
 	}
 
-<<<<<<< HEAD
-	// Histórico atualizado com paginação (100 registros por página)
+	// Histórico atualizado com paginação (100 registros por página) corrigido para 'horaEntrada'
 	@GetMapping("/{id}/historico")
 	public String historico(
 			@PathVariable UUID id,
-			@PageableDefault(page = 0, size = 100, sort = "dataHoraEntrada", direction = Sort.Direction.DESC) Pageable pageable,
+			@PageableDefault(page = 0, size = 100, sort = "horaEntrada", direction = Sort.Direction.DESC) Pageable pageable,
 			Model model) {
 
 		Pessoa pessoa = pessoaService.buscarPorId(id);
@@ -217,13 +197,6 @@ public class PessoaController {
 		model.addAttribute("currentPage", pageable.getPageNumber());
 		model.addAttribute("totalPages", paginaRegistros.getTotalPages());
 
-=======
-	@GetMapping("/{id}/historico")
-	public String historico(@PathVariable UUID id, Model model) {
-		Pessoa pessoa = pessoaService.buscarPorId(id);
-		model.addAttribute("pessoa", pessoa);
-		model.addAttribute("registros", pessoa.getRegistros());
->>>>>>> 83f1b7ba020a81546cd0af66f461e3ffad2f4e70
 		return "pessoas/historico";
 	}
 

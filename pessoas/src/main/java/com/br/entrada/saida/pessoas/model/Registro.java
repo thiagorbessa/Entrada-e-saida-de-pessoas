@@ -4,8 +4,16 @@ import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
 import java.util.UUID;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Table;
+import jakarta.persistence.Index;
 
 @Entity
+@Table(name = "registros", indexes = {
+        @Index(name = "idx_registro_pessoa_id", columnList = "pessoa_id"),
+        @Index(name = "idx_registro_hora_entrada", columnList = "horaEntrada"),
+        @Index(name = "idx_registro_hora_saida", columnList = "horaSaida")
+})
 @Getter
 @Setter
 @NoArgsConstructor

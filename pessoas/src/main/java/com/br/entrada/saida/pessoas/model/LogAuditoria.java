@@ -6,9 +6,16 @@ import lombok.Setter;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Table;
+import jakarta.persistence.Index; // <--- O IMPORT CORRETO DO JPA
 
 @Entity
-@Table(name = "log_auditoria")
+@Table(name = "log_auditoria", indexes = {
+        @Index(name = "idx_log_data_hora", columnList = "dataHora"),
+        @Index(name = "idx_log_usuario_cpf", columnList = "usuarioCpf"),
+        @Index(name = "idx_log_entidade_id", columnList = "entidadeId")
+})
 @Getter
 @Setter
 public class LogAuditoria {

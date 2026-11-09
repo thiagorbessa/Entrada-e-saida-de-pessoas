@@ -7,8 +7,16 @@ import lombok.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Table;
+import jakarta.persistence.Index; // <--- O IMPORT CORRETO DO JPA
 
 @Entity
+@Table(name = "pessoas", indexes = {
+		@Index(name = "idx_pessoa_cpf", columnList = "cpf"),
+		@Index(name = "idx_pessoa_nome", columnList = "nome"),
+		@Index(name = "idx_pessoa_unidade", columnList = "unidade")
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -31,7 +39,6 @@ public class Pessoa {
 	private String andar;
 	private String paciente;
 	private String observacao;
-
 
 	@OneToMany(mappedBy = "pessoa", cascade = CascadeType.ALL, orphanRemoval = true)
 	@OrderBy("horaEntrada DESC")

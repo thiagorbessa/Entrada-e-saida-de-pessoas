@@ -5,11 +5,8 @@ import com.br.entrada.saida.pessoas.model.Pessoa;
 import com.br.entrada.saida.pessoas.model.Usuario;
 import com.br.entrada.saida.pessoas.repository.LogAuditoriaRepository;
 import lombok.RequiredArgsConstructor;
-<<<<<<< HEAD
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-=======
->>>>>>> 83f1b7ba020a81546cd0af66f461e3ffad2f4e70
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -96,12 +93,9 @@ public class AuditoriaService {
     public List<LogAuditoria> listarTodos() {
         return logRepository.findAllByOrderByDataHoraDesc();
     }
-<<<<<<< HEAD
 
-    // NOVO: Listagem paginada para os logs
+    // Listagem paginada para os logs
     public Page<LogAuditoria> listarTodosPaginados(Pageable pageable) {
         return logRepository.findAllByOrderByDataHoraDesc(pageable);
     }
-=======
->>>>>>> 83f1b7ba020a81546cd0af66f461e3ffad2f4e70
 }

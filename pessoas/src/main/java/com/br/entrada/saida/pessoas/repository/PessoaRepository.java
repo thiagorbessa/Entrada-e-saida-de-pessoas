@@ -1,10 +1,7 @@
 package com.br.entrada.saida.pessoas.repository;
 
-<<<<<<< HEAD
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-=======
->>>>>>> 83f1b7ba020a81546cd0af66f461e3ffad2f4e70
 import org.springframework.data.jpa.repository.JpaRepository;
 import com.br.entrada.saida.pessoas.model.Pessoa;
 import com.br.entrada.saida.pessoas.model.Unidade;
@@ -39,17 +36,12 @@ public interface PessoaRepository extends JpaRepository<Pessoa, UUID> {
     """)
     List<Pessoa> buscarPorTermoEUnidades(@Param("termo") String termo, @Param("unidades") Set<Unidade> unidades);
 
-<<<<<<< HEAD
     // Método original (mantido)
     List<Pessoa> findByUnidadeIn(Set<Unidade> unidades);
 
-    // NOVO: Versão paginada exigida pelo PessoaService para suportar os 100 itens por página
+    // Versão paginada exigida pelo PessoaService para suportar os 100 itens por página
     Page<Pessoa> findByUnidadeIn(Set<Unidade> unidades, Pageable pageable);
 
-=======
-    List<Pessoa> findByUnidadeIn(Set<Unidade> unidades);
-
->>>>>>> 83f1b7ba020a81546cd0af66f461e3ffad2f4e70
     Optional<Pessoa> findByCpf(String cpf);
     boolean existsByCpf(String cpf);
     Optional<Pessoa> findByIdentidade(String identidade);

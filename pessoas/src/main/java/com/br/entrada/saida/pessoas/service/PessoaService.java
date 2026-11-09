@@ -6,11 +6,8 @@ import com.br.entrada.saida.pessoas.model.Pessoa;
 import com.br.entrada.saida.pessoas.model.Usuario;
 import com.br.entrada.saida.pessoas.repository.PessoaRepository;
 import lombok.RequiredArgsConstructor;
-<<<<<<< HEAD
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-=======
->>>>>>> 83f1b7ba020a81546cd0af66f461e3ffad2f4e70
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,8 +27,7 @@ public class PessoaService {
         return "ROLE_GERAL".equals(perfil) || "ROLE_ADMIN".equals(perfil);
     }
 
-<<<<<<< HEAD
-    // Listagem paginada padrão com 100 itens por página
+    // Listagem paginada padrão com suporte a 100 itens por página
     @Transactional(readOnly = true)
     public Page<Pessoa> listarPorUsuarioPaginado(Usuario usuario, Pageable pageable) {
         if (isAdmin(usuario)) {
@@ -44,8 +40,6 @@ public class PessoaService {
     }
 
     // Mantido para compatibilidade caso algum outro lugar chame sem paginação
-=======
->>>>>>> 83f1b7ba020a81546cd0af66f461e3ffad2f4e70
     @Transactional(readOnly = true)
     public List<Pessoa> listarPorUsuario(Usuario usuario) {
         if (isAdmin(usuario)) {
@@ -57,10 +51,6 @@ public class PessoaService {
         return pessoaRepository.findByUnidadeIn(usuario.getUnidades());
     }
 
-<<<<<<< HEAD
-    // Busca que varre todo o banco/permissão de unidades sem o corte engessado de 100 por página
-=======
->>>>>>> 83f1b7ba020a81546cd0af66f461e3ffad2f4e70
     @Transactional(readOnly = true)
     public List<Pessoa> buscarPorTermoEUsuario(String termo, Usuario usuario) {
         if (termo == null || termo.isBlank()) {
@@ -87,10 +77,7 @@ public class PessoaService {
     public void salvar(PessoaRequestDTO dto, Usuario usuarioLogado) {
         boolean administrador = isAdmin(usuarioLogado);
 
-<<<<<<< HEAD
-=======
         // Validação da unidade informada no formulário
->>>>>>> 83f1b7ba020a81546cd0af66f461e3ffad2f4e70
         if (!administrador) {
             if (usuarioLogado == null || usuarioLogado.getUnidades() == null || dto.getUnidade() == null
                     || !usuarioLogado.getUnidades().contains(dto.getUnidade())) {
@@ -124,20 +111,11 @@ public class PessoaService {
         if (isEdicao) {
             pessoa = buscarPorId(pessoaId);
 
-<<<<<<< HEAD
-            if (!administrador) {
-                if (pessoa.getUnidade() != null && !usuarioLogado.getUnidades().contains(pessoa.getUnidade())) {
-                    throw new SecurityException("Você não tem permissão para editar cadastros desta unidade.");
-                }
-=======
             // Validação de unidade na edição para usuário comum
             if (!administrador) {
-                // Se a pessoa já tinha unidade, valida se pertence à alçada do usuário
                 if (pessoa.getUnidade() != null && !usuarioLogado.getUnidades().contains(pessoa.getUnidade())) {
                     throw new SecurityException("Você não tem permissão para alterar o cadastro desta pessoa (unidade diferente).");
                 }
-                // Impede transferir a pessoa para uma unidade onde o usuário não atua
->>>>>>> 83f1b7ba020a81546cd0af66f461e3ffad2f4e70
                 if (!usuarioLogado.getUnidades().contains(dto.getUnidade())) {
                     throw new SecurityException("Você não pode transferir este cadastro para uma unidade sem permissão.");
                 }
