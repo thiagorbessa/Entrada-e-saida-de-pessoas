@@ -70,22 +70,15 @@ public class AuditoriaController {
     public String consultarBackup(@RequestParam(value = "ano", required = false) Integer ano, Model model, Principal principal) {
         Usuario usuario = obterUsuarioLogado(principal);
         if (usuario == null || !"ROLE_GERAL".equals(usuario.getPerfil())) {
-            return "redirect:/pessoas"; // Acesso restrito apenas ao Admin Geral
+            return "redirect:/pessoas";
         }
 
         if (ano != null) {
-            try {
-                // Tenta buscar os dados da tabela dinâmica do ano correspondente no MySQL
-                List<LogAuditoria> logsBackup = auditoriaService.listarLogsPorAnoBackup(ano);
-                model.addAttribute("logs", logsBackup);
+            boolean existe = backupService.verificarExistenciaBackup(ano);
+            if (!existe) {
+                model.addAttribute("erro", "Nenhum backup registrado ou tabela encontrada para o ano de " + ano + ".");
+            } else {
                 model.addAttribute("anoPesquisado", ano);
-
-                if (logsBackup.isEmpty()) {
-                    model.addAttribute("erro", "A tabela de backup para o ano " + ano + " está vazia.");
-                }
-            } catch (Exception e) {
-                // Se a tabela não existir no banco do Docker, o MySQL dispara exceção tratada aqui
-                model.addAttribute("erro", "Não existe backup registrado ou tabela encontrada para o ano de " + ano + ".");
             }
         }
 
@@ -189,9 +182,11 @@ public class AuditoriaController {
         try {
             BackupService.ResultadoArquivamento r = backupService.arquivarAno(ano, apagar);
 
+            // Mensagem atualizada incluindo a contagem de logs copiados para auditoria_logs_ANO
             String mensagem = "Backup do ano " + ano + " concluído: "
-                    + r.registrosCopiados() + " registros novos copiados para registros_" + ano
-                    + " e " + r.pessoasNoBackup() + " pessoas atualizadas em pessoas_" + ano + ".";
+                    + r.registrosCopiados() + " registros novos copiados para registros_" + ano + ", "
+                    + r.pessoasNoBackup() + " pessoas atualizadas em pessoas_" + ano + " e "
+                    + r.logsCopiados() + " logs gravados em logs_" + ano + ".";
             if (apagar) {
                 mensagem += " Removidos do sistema: " + r.registrosApagados() + " registros e "
                         + r.pessoasApagadas() + " pessoas.";

@@ -204,7 +204,7 @@ header nav ul li a:hover,
 	display: flex;
 	gap: 10px;
 	width: 100%;
-	max-width: 720px; 
+	max-width: 720px;
 	align-items: center;
 }
 
