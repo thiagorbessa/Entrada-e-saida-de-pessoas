@@ -200,7 +200,13 @@ header nav ul li a:hover,
 
 /* 5. BUSCA & FILTROS ======================================================= */
 .busca-container { display: flex; justify-content: center; margin-bottom: 22px; width: 100%; }
-.busca-wrapper { display: flex; gap: 12px; width: 100%; max-width: 600px; }
+.busca-wrapper {
+	display: flex;
+	gap: 10px;
+	width: 100%;
+	max-width: 720px; 
+	align-items: center;
+}
 
 .busca-container-usuarios {
 	display: flex;
@@ -298,13 +304,14 @@ table {
 
 th, td {
 	padding: 10px 8px;
-	text-align: left;
+	text-align: center;
 	vertical-align: middle;
 	border-bottom: 1px solid #edf2f7;
 	font-size: 0.84rem;
 }
 
-th { background-color: var(--cor-tabela-cabecalho); color: white; font-weight: 600; white-space: nowrap; }
+th { background-color: var(--cor-tabela-cabecalho); color: white; font-weight: 600;
+	white-space: nowrap; text-align: center}
 tr:hover td { background-color: #f8fafc; }
 /* Efeito Zebra nas tabelas (linhas alternadas) */
 tbody tr:nth-child(even) td {

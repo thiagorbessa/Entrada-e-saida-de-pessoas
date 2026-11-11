@@ -49,10 +49,12 @@
             <span th:text="${erro}"></span>
         </div>
 
+        <!-- Campo de Pesquisa em Tempo Real e Botão Novo -->
         <div class="busca-container">
             <div class="busca-wrapper">
                 <input type="text" id="busca" class="campo-busca" placeholder="Buscar por nome, CPF, RG ou telefone" autocomplete="off" />
                 <a id="limpar-busca" class="btn-busca-limpar" href="javascript:void(0)">Limpar</a>
+                <a th:href="@{/pessoas/novo}" class="btn-novo">+ Novo</a>
             </div>
         </div>
 
