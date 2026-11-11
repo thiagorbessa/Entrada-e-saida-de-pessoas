@@ -23,7 +23,6 @@
             </li>
         </ul>
 
-        <!-- Exibe o NOME COMPLETO do usuário autenticado -->
         <div class="nav-usuario" sec:authorize="isAuthenticated()"
              th:with="userObj=${usuarioLogado != null ? usuarioLogado : @usuarioRepository.findByCpf(#authentication.name).orElse(null)}">
             <a th:href="@{/}" class="link-usuario-logado" title="Ir para a página inicial">
@@ -43,7 +42,6 @@
             <h1>Lista de Pessoas</h1>
         </div>
 
-        <!-- Mensagens de Feedback -->
         <div th:if="${sucesso}" class="alert alert-sucesso">
             <span th:text="${sucesso}"></span>
         </div>
@@ -51,7 +49,6 @@
             <span th:text="${erro}"></span>
         </div>
 
-        <!-- Campo de Pesquisa em Tempo Real Centralizado -->
         <div class="busca-container">
             <div class="busca-wrapper">
                 <input type="text" id="busca" class="campo-busca" placeholder="Buscar por nome, CPF, RG ou telefone" autocomplete="off" />
@@ -75,39 +72,38 @@
             </select>
         </div>
 
-        <!-- Tabela tradicional em telas largas e cartões em telas menores -->
         <div class="tabela-responsiva tabela-pessoas-responsiva">
             <table id="tabela-pessoas" th:fragment="tabela">
                 <colgroup sec:authorize="hasAnyRole('SISTEMA', 'GERAL')">
-                    <col style="width: 7.5%">
-                    <col style="width: 8%">
-                    <col style="width: 8%">
-                    <col style="width: 5.5%">
-                    <col style="width: 5%">
-                    <col style="width: 4.5%">
-                    <col style="width: 6%">
-                    <col style="width: 9%">
-                    <col style="width: 9%">
-                    <col style="width: 10%">
-                    <col style="width: 8.5%">
-                    <col style="width: 6%">
-                    <col style="width: 5%">
-                    <col style="width: 7%">
+                    <col style="width: 7%">   <!-- Documento -->
+                    <col style="width: 10%">  <!-- Nome -->
+                    <col style="width: 7.5%"> <!-- Telefone -->
+                    <col style="width: 5.5%"> <!-- Unidade -->
+                    <col style="width: 9%">   <!-- Setor -->
+                    <col style="width: 4.5%"> <!-- Andar -->
+                    <col style="width: 6.5%"> <!-- Paciente -->
+                    <col style="width: 8.5%"> <!-- Hora Entrada -->
+                    <col style="width: 8.5%"> <!-- Hora Saída -->
+                    <col style="width: 9.5%"> <!-- Ação -->
+                    <col style="width: 8.5%"> <!-- Observação -->
+                    <col style="width: 5.5%"> <!-- Histórico -->
+                    <col style="width: 4.5%"> <!-- Editar -->
+                    <col style="width: 5.5%"> <!-- Remover -->
                 </colgroup>
                 <colgroup sec:authorize="!hasAnyRole('SISTEMA', 'GERAL')">
-                    <col style="width: 8%">
-                    <col style="width: 9%">
-                    <col style="width: 8%">
-                    <col style="width: 6%">
-                    <col style="width: 5%">
-                    <col style="width: 5%">
-                    <col style="width: 6%">
-                    <col style="width: 9%">
-                    <col style="width: 9%">
-                    <col style="width: 10%">
-                    <col style="width: 9%">
-                    <col style="width: 7%">
-                    <col style="width: 9%">
+                    <col style="width: 7.5%"> <!-- Documento -->
+                    <col style="width: 11%">  <!-- Nome -->
+                    <col style="width: 8%">   <!-- Telefone -->
+                    <col style="width: 6%">   <!-- Unidade -->
+                    <col style="width: 9.5%"> <!-- Setor -->
+                    <col style="width: 5%">   <!-- Andar -->
+                    <col style="width: 7%">   <!-- Paciente -->
+                    <col style="width: 9%">   <!-- Hora Entrada -->
+                    <col style="width: 9%">   <!-- Hora Saída -->
+                    <col style="width: 10%">  <!-- Ação -->
+                    <col style="width: 9%">   <!-- Observação -->
+                    <col style="width: 4.5%"> <!-- Histórico -->
+                    <col style="width: 4.5%"> <!-- Editar -->
                 </colgroup>
                 <thead>
                 <tr>
@@ -137,30 +133,37 @@
                     <td data-label="Andar" th:text="${p.andar}"></td>
                     <td data-label="Paciente" th:text="${p.paciente}"></td>
 
-                    <!-- Registro em Aberto -->
-                    <th:block th:with="reg=${registrosAbertos != null ? registrosAbertos.get(p.id) : null}">
+                    <!-- Exibição do Último Registro -->
+                    <th:block th:with="reg=${ultimosRegistros != null ? ultimosRegistros.get(p.id) : null}">
+                        <!-- Hora Entrada: exibe se houver registro, senão exibe '-' -->
                         <td class="td-nowrap" data-label="Hora de entrada" th:text="${reg != null ? #temporals.format(reg.horaEntrada, 'dd/MM/yyyy HH:mm') : '-'}"></td>
+
+                        <!-- Hora Saída: exibe apenas se houver horaSaida preenchida, senão exibe '-' -->
                         <td class="td-nowrap" data-label="Hora de saída" th:text="${reg != null && reg.horaSaida != null ? #temporals.format(reg.horaSaida, 'dd/MM/yyyy HH:mm') : '-'}"></td>
+
+                        <!-- Botão de Ação -->
                         <td data-label="Ação" style="text-align: center;">
-                            <form th:if="${reg == null}" th:action="@{/registros/entrada}" method="post" style="display:inline;">
+                            <!-- Exibe "Registrar Entrada" se não houver registro OU se o último já tiver saída preenchida (entradas e saídas pares) -->
+                            <form th:if="${reg == null || reg.horaSaida != null}" th:action="@{/registros/entrada}" method="post" style="display:inline;">
                                 <input type="hidden" name="pessoaId" th:value="${p.id}" />
                                 <button type="submit" class="btn-acao btn-entrada">Registrar Entrada</button>
                             </form>
-                            <form th:if="${reg != null}" th:action="@{/registros/saida}" method="post" style="display:inline;">
+
+                            <!-- Exibe "Registrar Saída" se houver registro sem horaSaida (entrada ímpar em aberto) -->
+                            <form th:if="${reg != null && reg.horaSaida == null}" th:action="@{/registros/saida}" method="post" style="display:inline;">
                                 <input type="hidden" name="registroId" th:value="${reg.id}" />
+                                <input type="hidden" name="pessoaId" th:value="${p.id}" />
                                 <button type="submit" class="btn-acao btn-saida">Registrar Saída</button>
                             </form>
                         </td>
                     </th:block>
 
-                    <!-- Observação com texto expansível -->
                     <td class="td-obs" data-label="Observação">
                         <span th:text="${p.observacao != null and #strings.length(p.observacao) > 30 ? #strings.substring(p.observacao, 0, 30) + '...' : p.observacao}"></span>
                         <a href="javascript:void(0)" class="ver-mais" th:if="${p.observacao != null and #strings.length(p.observacao) > 30}"
                            th:data-obs="${p.observacao}" onclick="mostrarObservacaoCompleta(this)">Ver mais</a>
                     </td>
 
-                    <!-- Ações -->
                     <td data-label="Histórico" style="text-align: center;">
                         <a th:href="@{/pessoas/{id}/historico(id=${p.id})}" class="link-acao">Histórico</a>
                     </td>
@@ -204,6 +207,7 @@
                         const novaTabela = doc.querySelector('#tabela-pessoas');
                         if (novaTabela) {
                             document.querySelector('#tabela-pessoas').innerHTML = novaTabela.innerHTML;
+                            reaplicarOrdenacaoSalva();
                         }
                     });
             }, 300);
@@ -221,6 +225,7 @@
                     const novaTabela = doc.querySelector('#tabela-pessoas');
                     if (novaTabela) {
                         document.querySelector('#tabela-pessoas').innerHTML = novaTabela.innerHTML;
+                        reaplicarOrdenacaoSalva();
                     }
                 });
         });
@@ -234,17 +239,27 @@
     const ordenacaoPessoas = document.getElementById('ordenacao-pessoas');
     if (ordenacaoPessoas) {
         ordenacaoPessoas.addEventListener('change', function () {
-            ordenarTabela(Number(this.value));
+            ordenarTabela(Number(this.value), true);
         });
     }
 
     let direcaoAsc = true;
-    function ordenarTabela(colunaIndex) {
+
+    function ordenarTabela(colunaIndex, alternarDirecao = true) {
         const table = document.getElementById("tabela-pessoas");
+        if (!table) return;
         const tbody = table.querySelector("tbody");
         const linhas = Array.from(tbody.querySelectorAll("tr:not(.linha-vazia)"));
 
         if (linhas.length <= 1) return;
+
+        // Recupera ou inverte direção
+        if (!alternarDirecao) {
+            const direcaoSalva = sessionStorage.getItem('pessoas_ordem_direcao');
+            if (direcaoSalva !== null) {
+                direcaoAsc = (direcaoSalva === 'asc');
+            }
+        }
 
         linhas.sort((a, b) => {
             const tdA = a.children[colunaIndex];
@@ -258,9 +273,28 @@
             return direcaoAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
         });
 
-        direcaoAsc = !direcaoAsc;
+        // Salva estado da ordenação no navegador
+        sessionStorage.setItem('pessoas_ordem_coluna', colunaIndex);
+        sessionStorage.setItem('pessoas_ordem_direcao', direcaoAsc ? 'asc' : 'desc');
+
+        if (alternarDirecao) {
+            direcaoAsc = !direcaoAsc;
+        }
+
         linhas.forEach(linha => tbody.appendChild(linha));
     }
+
+    function reaplicarOrdenacaoSalva() {
+        const colunaSalva = sessionStorage.getItem('pessoas_ordem_coluna');
+        if (colunaSalva !== null) {
+            ordenarTabela(Number(colunaSalva), false);
+        }
+    }
+
+    // Ao carregar a página após registrar entrada/saída/remover, restaura a ordenação prévia
+    document.addEventListener('DOMContentLoaded', function() {
+        reaplicarOrdenacaoSalva();
+    });
 </script>
 </body>
 </html>

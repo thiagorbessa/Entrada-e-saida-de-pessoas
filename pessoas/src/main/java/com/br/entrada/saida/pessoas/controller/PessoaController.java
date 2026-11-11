@@ -75,16 +75,19 @@ public class PessoaController {
 		model.addAttribute("totalPages", paginaPessoas.getTotalPages());
 		model.addAttribute("totalItems", paginaPessoas.getTotalElements());
 
-		Map<UUID, Registro> registrosAbertos = new HashMap<>();
+		// Mapeia o ÚLTIMO REGISTRO de cada pessoa (aberto ou fechado) para exibir na tabela
+		Map<UUID, Registro> ultimosRegistros = new HashMap<>();
 		if (pessoas != null) {
 			for (Pessoa p : pessoas) {
 				if (p != null && p.getId() != null) {
-					registroService.buscarRegistroAbertoPorPessoa(p.getId())
-							.ifPresent(reg -> registrosAbertos.put(p.getId(), reg));
+					Registro ultimo = registroService.buscarUltimoRegistroDaPessoa(p.getId());
+					if (ultimo != null) {
+						ultimosRegistros.put(p.getId(), ultimo);
+					}
 				}
 			}
 		}
-		model.addAttribute("registrosAbertos", registrosAbertos);
+		model.addAttribute("ultimosRegistros", ultimosRegistros);
 		model.addAttribute("usuarioLogado", usuarioLogado);
 		return "pessoas/listar";
 	}
@@ -95,16 +98,19 @@ public class PessoaController {
 		List<Pessoa> pessoas = pessoaService.buscarPorTermoEUsuario(termo, usuarioLogado);
 		model.addAttribute("pessoas", pessoas);
 
-		Map<UUID, Registro> registrosAbertos = new HashMap<>();
+		// Mapeia o ÚLTIMO REGISTRO de cada pessoa na busca em tempo real
+		Map<UUID, Registro> ultimosRegistros = new HashMap<>();
 		if (pessoas != null) {
 			for (Pessoa p : pessoas) {
 				if (p != null && p.getId() != null) {
-					registroService.buscarRegistroAbertoPorPessoa(p.getId())
-							.ifPresent(reg -> registrosAbertos.put(p.getId(), reg));
+					Registro ultimo = registroService.buscarUltimoRegistroDaPessoa(p.getId());
+					if (ultimo != null) {
+						ultimosRegistros.put(p.getId(), ultimo);
+					}
 				}
 			}
 		}
-		model.addAttribute("registrosAbertos", registrosAbertos);
+		model.addAttribute("ultimosRegistros", ultimosRegistros);
 		model.addAttribute("usuarioLogado", usuarioLogado);
 		return "pessoas/listar :: tabela";
 	}
@@ -163,6 +169,10 @@ public class PessoaController {
 				return "redirect:/pessoas";
 			}
 		}
+
+		// Busca o último registro de entrada/saída para exibir no formulário
+		Registro ultimoRegistro = registroService.buscarUltimoRegistroDaPessoa(id);
+		model.addAttribute("ultimoRegistro", ultimoRegistro);
 
 		PessoaRequestDTO dto = new PessoaRequestDTO();
 		dto.setId(pessoa.getId().toString());

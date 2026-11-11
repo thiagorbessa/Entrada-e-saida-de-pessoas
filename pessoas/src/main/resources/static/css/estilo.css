@@ -997,18 +997,7 @@ textarea.form-control { resize: vertical; min-height: 100px; }
    TABELA DE PESSOAS — QUEBRA DE LINHA EM TODAS AS COLUNAS
    ========================================================== */
 
-@media (min-width: 1101px) {
 
-	/* Todas as células podem quebrar o conteúdo */
-	.tabela-pessoas-responsiva tbody td {
-		white-space: normal !important;
-		overflow: visible;
-		text-overflow: clip;
-		overflow-wrap: anywhere;
-		word-break: normal;
-		vertical-align: middle;
-		line-height: 1.4;
-	}
 
 	/* Nome sem limite artificial de largura */
 	.tabela-pessoas-responsiva tbody td.td-nome {
@@ -1043,4 +1032,71 @@ textarea.form-control { resize: vertical; min-height: 100px; }
 		white-space: nowrap;
 	}
 
+
+/* Evita a quebra no meio das palavras em tabelas ou exibições de dados */
+.table td, .table th, .dados-container {
+	white-space: nowrap;
+	word-break: keep-all;
+	overflow-wrap: break-word;
+}
+/* ==========================================================
+   TABELA DE PESSOAS — QUEBRA INTELIGENTE SEM FATIAR PALAVRAS
+   ========================================================== */
+
+@media (min-width: 1101px) {
+
+	/* Regra principal: Quebra apenas por espaço entre palavras (não fatia palavras normais) */
+	.tabela-pessoas-responsiva tbody td {
+		white-space: normal !important;
+		overflow-wrap: break-word; /* Só quebra palavra única se passar das bordas */
+		word-break: normal;       /* Preserva 'Informática' e 'Cardiologia' inteiras */
+		vertical-align: middle;
+		line-height: 1.4;
+	}
+
+	/* Garante largura mínima para evitar empurrar a última letra para a linha de baixo */
+	.tabela-pessoas-responsiva tbody td[data-label="Setor"] {
+		min-width: 110px;
+	}
+
+	.tabela-pessoas-responsiva tbody td[data-label="Unidade"] {
+		min-width: 80px;
+	}
+
+	.tabela-pessoas-responsiva tbody td[data-label="Paciente"] {
+		min-width: 100px;
+	}
+
+	/* Nome da pessoa */
+	.tabela-pessoas-responsiva tbody td.td-nome {
+		max-width: none;
+		min-width: 130px;
+	}
+
+	/* Observações */
+	.tabela-pessoas-responsiva tbody td.td-obs {
+		max-width: none;
+		white-space: normal;
+	}
+
+	.tabela-pessoas-responsiva .td-obs > span:first-child {
+		display: inline;
+		max-width: none;
+		overflow: visible;
+		text-overflow: clip;
+		white-space: normal;
+		overflow-wrap: break-word;
+	}
+
+	/* Preserva botões e links em uma única linha */
+	.tabela-pessoas-responsiva tbody td .btn-acao,
+	.tabela-pessoas-responsiva tbody td .link-acao,
+	.tabela-pessoas-responsiva tbody td .ver-mais {
+		white-space: nowrap;
+		word-break: normal;
+	}
+
+	.tabela-pessoas-responsiva tbody td form {
+		white-space: nowrap;
+	}
 }

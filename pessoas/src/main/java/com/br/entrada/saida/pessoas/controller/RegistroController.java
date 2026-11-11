@@ -9,6 +9,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.UUID;
 
@@ -21,22 +22,37 @@ public class RegistroController {
     private final UsuarioRepository usuarioRepository;
 
     @PostMapping("/entrada")
-    public String registrarEntrada(@RequestParam("pessoaId") UUID pessoaId, Authentication auth) {
-        // Captura o operador que está realizando a entrada
-        Usuario operador = usuarioRepository.findByCpf(auth.getName())
-                .orElseThrow(() -> new RuntimeException("Operador não encontrado"));
+    public String registrarEntrada(@RequestParam("pessoaId") UUID pessoaId,
+                                   Authentication auth,
+                                   RedirectAttributes redirectAttributes) {
+        try {
+            Usuario operador = usuarioRepository.findByCpf(auth.getName())
+                    .orElseThrow(() -> new RuntimeException("Operador não encontrado"));
 
-        registroService.registrarEntrada(pessoaId, operador);
+            registroService.registrarEntrada(pessoaId, operador);
+            redirectAttributes.addFlashAttribute("sucesso", "Entrada registrada com sucesso!");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("erro", e.getMessage());
+        }
+
         return "redirect:/pessoas";
     }
 
     @PostMapping("/saida")
-    public String registrarSaida(@RequestParam("registroId") UUID registroId, Authentication auth) {
-        // Captura o operador que está realizando a saída
-        Usuario operador = usuarioRepository.findByCpf(auth.getName())
-                .orElseThrow(() -> new RuntimeException("Operador não encontrado"));
+    public String registrarSaida(@RequestParam("registroId") UUID registroId,
+                                 @RequestParam(value = "pessoaId", required = false) UUID pessoaId,
+                                 Authentication auth,
+                                 RedirectAttributes redirectAttributes) {
+        try {
+            Usuario operador = usuarioRepository.findByCpf(auth.getName())
+                    .orElseThrow(() -> new RuntimeException("Operador não encontrado"));
 
-        registroService.registrarSaida(registroId, operador);
+            registroService.registrarSaida(registroId, operador);
+            redirectAttributes.addFlashAttribute("sucesso", "Saída registrada com sucesso!");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("erro", e.getMessage());
+        }
+
         return "redirect:/pessoas";
     }
 }

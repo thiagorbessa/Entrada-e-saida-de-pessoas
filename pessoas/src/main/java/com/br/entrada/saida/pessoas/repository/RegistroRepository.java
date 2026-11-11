@@ -19,7 +19,10 @@ public interface RegistroRepository extends JpaRepository<Registro, UUID> {
 
     List<Registro> findByHoraSaidaIsNull();
 
-    //  Método paginado para buscar o histórico de registros da pessoa ordenado do mais recente para o mais antigo
+    // Método paginado para buscar o histórico de registros da pessoa ordenado do mais recente para o mais antigo
     Page<Registro> findByPessoaIdOrderByHoraEntradaDesc(UUID pessoaId, Pageable pageable);
+
+    // Método para buscar o último registro cadastrado da pessoa (aberto ou fechado)
+    Optional<Registro> findFirstByPessoaIdOrderByHoraEntradaDesc(UUID pessoaId);
 
 }

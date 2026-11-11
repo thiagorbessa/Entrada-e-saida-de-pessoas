@@ -81,4 +81,11 @@ public class RegistroService {
     public Page<Registro> buscarHistoricoPorPessoaPaginado(UUID pessoaId, Pageable pageable) {
         return registroRepository.findByPessoaIdOrderByHoraEntradaDesc(pessoaId, pageable);
     }
+
+    // NOVO MÉTODO: Busca o último registro cadastrado da pessoa (aberto ou já fechado)
+    @Transactional(readOnly = true)
+    public Registro buscarUltimoRegistroDaPessoa(UUID pessoaId) {
+        return registroRepository.findFirstByPessoaIdOrderByHoraEntradaDesc(pessoaId)
+                .orElse(null);
+    }
 }
