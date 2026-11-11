@@ -6,6 +6,7 @@ import com.br.entrada.saida.pessoas.model.Registro;
 import com.br.entrada.saida.pessoas.model.Usuario;
 import com.br.entrada.saida.pessoas.repository.UsuarioRepository;
 import com.br.entrada.saida.pessoas.service.AuditoriaService;
+import com.br.entrada.saida.pessoas.service.BackupService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -14,10 +15,14 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.security.Principal;
+import java.time.Year;
 import java.util.List;
 import java.util.UUID;
 
@@ -27,11 +32,16 @@ import java.util.UUID;
 public class AuditoriaController {
 
     private final AuditoriaService auditoriaService;
+    private final BackupService backupService;
     private final UsuarioRepository usuarioRepository;
 
     private Usuario obterUsuarioLogado(Principal principal) {
         if (principal == null) return null;
         return usuarioRepository.findByCpf(principal.getName()).orElse(null);
+    }
+
+    private boolean ehAdminGeral(Usuario usuario) {
+        return usuario != null && "ROLE_GERAL".equals(usuario.getPerfil());
     }
 
     @GetMapping("/logs")
@@ -79,6 +89,7 @@ public class AuditoriaController {
             }
         }
 
+        model.addAttribute("anoAtual", Year.now().getValue());
         model.addAttribute("usuarioLogado", usuario);
         return "auditoria/backup";
     }
@@ -145,5 +156,104 @@ public class AuditoriaController {
 
         model.addAttribute("usuarioLogado", usuario);
         return "auditoria/logs-backup";
+    }
+
+    // ==========================================================
+    // NOVO: arquivar o ano (backup e manter / backup e apagar)
+    // ==========================================================
+
+    @PostMapping("/backup/arquivar")
+    public String arquivar(@RequestParam("ano") int ano,
+                           @RequestParam("modo") String modo,
+                           @RequestParam(value = "confirmacao", required = false) String confirmacao,
+                           Principal principal,
+                           RedirectAttributes redirect) {
+
+        Usuario usuario = obterUsuarioLogado(principal);
+        if (!ehAdminGeral(usuario)) {
+            return "redirect:/pessoas";
+        }
+
+        boolean apagar = "apagar".equals(modo);
+        if (!apagar && !"manter".equals(modo)) {
+            redirect.addFlashAttribute("erro", "Operação inválida.");
+            return "redirect:/auditoria/backup";
+        }
+
+        // Operação destrutiva exige confirmação digitada no servidor também (não só no navegador).
+        if (apagar && !("APAGAR " + ano).equals(confirmacao == null ? "" : confirmacao.trim())) {
+            redirect.addFlashAttribute("erro", "Confirmação incorreta. Nada foi alterado. Digite exatamente: APAGAR " + ano);
+            return "redirect:/auditoria/backup";
+        }
+
+        try {
+            BackupService.ResultadoArquivamento r = backupService.arquivarAno(ano, apagar);
+
+            String mensagem = "Backup do ano " + ano + " concluído: "
+                    + r.registrosCopiados() + " registros novos copiados para registros_" + ano
+                    + " e " + r.pessoasNoBackup() + " pessoas atualizadas em pessoas_" + ano + ".";
+            if (apagar) {
+                mensagem += " Removidos do sistema: " + r.registrosApagados() + " registros e "
+                        + r.pessoasApagadas() + " pessoas.";
+            }
+
+            try {
+                auditoriaService.registrar(usuario,
+                        apagar ? "BACKUP_E_APAGAR" : "BACKUP_E_MANTER",
+                        "BACKUP", null, "Arquivamento do ano " + ano, mensagem);
+            } catch (Exception e) {
+                // O arquivamento já foi concluído; falha no log não deve esconder isso.
+                System.err.println("Falha ao registrar log do arquivamento: " + e.getMessage());
+            }
+
+            redirect.addFlashAttribute("sucesso", mensagem);
+        } catch (Exception e) {
+            e.printStackTrace();
+            redirect.addFlashAttribute("erro", "Falha ao arquivar (nada foi apagado): " + e.getMessage());
+        }
+
+        return "redirect:/auditoria/backup";
+    }
+
+    // ==========================================================
+    // NOVO: importar dump .sql
+    // ==========================================================
+
+    @PostMapping("/backup/importar")
+    public String importar(@RequestParam("arquivo") MultipartFile arquivo,
+                           @RequestParam(value = "confirmacao", required = false) String confirmacao,
+                           Principal principal,
+                           RedirectAttributes redirect) {
+
+        Usuario usuario = obterUsuarioLogado(principal);
+        if (!ehAdminGeral(usuario)) {
+            return "redirect:/pessoas";
+        }
+
+        if (!"IMPORTAR".equals(confirmacao == null ? "" : confirmacao.trim())) {
+            redirect.addFlashAttribute("erro", "Confirmação incorreta. Nada foi alterado. Digite exatamente: IMPORTAR");
+            return "redirect:/auditoria/backup";
+        }
+
+        try {
+            backupService.importarSql(arquivo);
+            String mensagem = "Importação concluída a partir de '" + arquivo.getOriginalFilename() + "'.";
+
+            try {
+                auditoriaService.registrar(usuario, "IMPORTAR_BACKUP", "BACKUP", null,
+                        "Importação de dump SQL", mensagem);
+            } catch (Exception e) {
+                System.err.println("Falha ao registrar log da importação: " + e.getMessage());
+            }
+
+            redirect.addFlashAttribute("sucesso", mensagem);
+        } catch (Exception e) {
+            e.printStackTrace();
+            redirect.addFlashAttribute("erro",
+                    "Falha na importação. O banco pode estar parcialmente restaurado; refaça a importação com um arquivo válido. Detalhe: "
+                            + e.getMessage());
+        }
+
+        return "redirect:/auditoria/backup";
     }
 }

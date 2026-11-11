@@ -46,8 +46,11 @@
                     <td th:text="${r.andar}"></td>
                     <td th:text="${r.paciente}"></td>
                     <td>
-                        <span th:text="${r.operadorEntradaNome != null ? r.operadorEntradaNome : '-'}">Operador</span><br/>
-                        <small style="color: #666;" th:text="${r.operadorSaidaNome != null ? 'Saída: ' + r.operadorSaidaNome : ''}"></small>
+                        <small style="display: block; color: #666; font-style: italic;"
+                               th:text="'Entrada: ' + ${r.operadorEntradaNome}"></small>
+                        <small style="display: block; color: #666; font-style: italic;"
+                               th:if="${r.usuarioSaida != null}"
+                               th:text="'Saída: ' + ${r.operadorSaidaNome}"></small>
                     </td>
                 </tr>
                 <tr th:if="${#lists.isEmpty(registros)}">

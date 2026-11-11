@@ -20,6 +20,18 @@
 </header>
 
 <main class="container-principal">
+
+    <!-- Mensagens (sucesso / erro), inclusive as vindas de redirect após arquivar/importar -->
+    <div style="max-width: 900px; margin: 30px auto 0 auto;">
+        <div th:if="${sucesso}" class="alert alert-sucesso">
+            <p style="margin: 0;" th:text="${sucesso}"></p>
+        </div>
+        <div th:if="${erro}" class="alert alert-erro">
+            <p th:text="${erro}"></p>
+        </div>
+    </div>
+
+    <!-- ===================== CONSULTA POR ANO ===================== -->
     <div class="card-welcome" style="max-width: 900px; margin: 30px auto;">
         <h1>Consulta de Logs Arquivados (Backup Anual)</h1>
         <p>Digite o ano correspondente ao backup que deseja consultar (Ex: 2025). Os dados exibidos são estritos de leitura.</p>
@@ -32,21 +44,84 @@
 
         <!-- Botões de Acesso aos Dados do Ano Pesquisado (Aparecem automaticamente após pesquisar um ano) -->
         <div th:if="${anoPesquisado != null}" style="margin-bottom: 25px; display: flex; gap: 10px; flex-wrap: wrap;">
-            <!-- Botão de Pessoas -->
-            <a th:href="@{/auditoria/backup/pessoas(ano=${anoPesquisado})}" class="btn" style="background-color: #2b7a78; color: #fff; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; padding: 10px 15px; border-radius: 4px; font-weight: 600;">
+            <a th:href="@{/auditoria/backup/pessoas(ano=${anoPesquisado})}" class="btn btn-consulta">
                 👥 Ver Pessoas do Ano de <span th:text="${anoPesquisado}"></span>
             </a>
 
-            <!-- Botão de Logs do Ano (Redireciona para a página dedicada de logs) -->
-            <a th:href="@{/auditoria/backup/logs-ano(ano=${anoPesquisado})}" class="btn" style="background-color: #2c7a7b; color: #fff; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; padding: 10px 15px; border-radius: 4px; font-weight: 600;">
+            <a th:href="@{/auditoria/backup/logs-ano(ano=${anoPesquisado})}" class="btn btn-consulta">
                 📋 Ver Logs do Ano de <span th:text="${anoPesquisado}"></span>
             </a>
         </div>
+    </div>
 
-        <!-- Mensagens de Erro ou Alerta -->
-        <div th:if="${erro}" class="alert alert-erro">
-            <p th:text="${erro}"></p>
-        </div>
+    <!-- ===================== ARQUIVAR O ANO ===================== -->
+    <div class="card-welcome" style="max-width: 900px; margin: 30px auto;">
+        <h2>Arquivar dados atuais no backup do ano</h2>
+        <p>
+            Copia as visitas já finalizadas do ano escolhido e as pessoas para as tabelas
+            <strong>registros_ANO</strong> e <strong>pessoas_ANO</strong>. Se as tabelas do ano já existirem,
+            os dados são acrescentados (sem duplicar). Visitas em aberto nunca são copiadas nem apagadas.
+        </p>
+
+        <!-- Backup e MANTER os dados -->
+        <form th:action="@{/auditoria/backup/arquivar}" method="post"
+              style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 15px;">
+            <input type="number" name="ano" th:value="${anoAtual}" min="2000" max="2100" required
+                   class="form-control" style="max-width: 140px;" />
+            <button type="submit" name="modo" value="manter" class="btn btn-salvar">
+                💾 Fazer backup e manter os dados
+            </button>
+        </form>
+
+        <hr style="margin: 25px 0; border: none; border-top: 1px solid #e2e5ea;" />
+
+        <!-- Backup e APAGAR os dados -->
+        <form th:action="@{/auditoria/backup/arquivar}" method="post"
+              onsubmit="return confirm('Os registros do ano e as pessoas arquivadas serão REMOVIDOS do sistema. Deseja continuar?');"
+              style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+            <input type="number" id="ano-apagar" name="ano" th:value="${anoAtual}" min="2000" max="2100" required
+                   class="form-control" style="max-width: 140px;" />
+            <input type="text" id="conf-apagar" name="confirmacao" required autocomplete="off"
+                   class="form-control" style="max-width: 220px;" />
+            <button type="submit" name="modo" value="apagar" class="btn btn-perigo">
+                🗑️ Fazer backup e apagar os dados
+            </button>
+        </form>
+        <p style="color: #666; font-size: 0.85rem; margin-top: 8px;">
+            Só é removido o que foi confirmado dentro do backup. Pessoas só são removidas se tiveram visitas arquivadas
+            e não têm mais nenhuma visita no sistema.
+        </p>
+        <script>
+            (function () {
+                var ano = document.getElementById('ano-apagar');
+                var conf = document.getElementById('conf-apagar');
+                function atualiza() { conf.placeholder = 'Digite: APAGAR ' + ano.value; }
+                ano.addEventListener('input', atualiza);
+                atualiza();
+            })();
+        </script>
+    </div>
+
+    <!-- ===================== IMPORTAR .SQL ===================== -->
+    <div class="card-welcome" style="max-width: 900px; margin: 30px auto;">
+        <h2>Importar backup (.sql)</h2>
+        <p>
+            Restaura um arquivo gerado pelos scripts <strong>backup-banco.sh</strong> / <strong>backup-banco.bat</strong>.
+            <strong>Atenção:</strong> a importação <strong>substitui todas as tabelas</strong> do banco pelas do arquivo
+            (inclusive usuários e logs). Se o arquivo falhar no meio, o banco pode ficar parcialmente restaurado,
+            então gere um backup novo antes de importar. Tamanho máximo: 50 MB.
+        </p>
+
+        <form th:action="@{/auditoria/backup/importar}" method="post" enctype="multipart/form-data"
+              onsubmit="return confirm('Isto vai SUBSTITUIR os dados atuais do banco pelo conteúdo do arquivo. Deseja continuar?');"
+              style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 15px;">
+            <input type="file" name="arquivo" accept=".sql" required />
+            <input type="text" name="confirmacao" placeholder="Digite: IMPORTAR" required autocomplete="off"
+                   class="form-control" style="max-width: 200px;" />
+            <button type="submit" class="btn btn-perigo">
+                📥 Importar backup
+            </button>
+        </form>
     </div>
 </main>
 </body>

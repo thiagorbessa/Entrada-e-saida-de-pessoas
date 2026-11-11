@@ -7,7 +7,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestão de Usuários</title>
     <link rel="stylesheet" th:href="@{/css/estilo.css}">
-    <link rel="stylesheet" href="../../../../../../../estilos-responsivos.css">
 </head>
 <body>
 <header>
@@ -43,13 +42,21 @@
         </div>
 
         <div class="busca-container-usuarios">
-            <input type="text" id="busca" class="form-control"
+            <input type="text" id="busca" class="form-control campo-busca"
                    placeholder="Buscar por nome ou CPF..." autocomplete="off">
             <a th:href="@{/usuarios/novo}" class="btn-novo">+ Cadastrar Usuário</a>
         </div>
 
         <div class="tabela-responsiva tabela-usuarios-responsiva">
             <table>
+                <colgroup>
+                    <col style="width: 24%">
+                    <col style="width: 16%">
+                    <col style="width: 18%">
+                    <col style="width: 22%">
+                    <col style="width: 9%">
+                    <col style="width: 11%">
+                </colgroup>
                 <thead>
                 <tr>
                     <th>Nome Completo</th>
@@ -62,14 +69,14 @@
                 </thead>
                 <tbody id="tabela-usuarios">
                 <tr th:each="u : ${usuarios}">
-                    <td class="font-weight-600" data-label="Nome Completo" th:text="${u.nomeCompleto}"></td>
+                    <td class="font-weight-600 td-nome" data-label="Nome Completo" th:text="${u.nomeCompleto}"></td>
                     <td class="cpf-coluna" data-label="CPF (Login)" th:text="${u.cpf}"></td>
                     <td data-label="Perfil de Acesso">
                         <span th:if="${u.perfil == 'ROLE_USER'}" class="badge badge-user">Usuário</span>
                         <span th:if="${u.perfil == 'ROLE_SISTEMA'}" class="badge badge-sistema">Admin Sistema</span>
                         <span th:if="${u.perfil == 'ROLE_GERAL'}" class="badge badge-geral">Admin Geral</span>
                     </td>
-                    <td data-label="Unidades Permitidas">
+                    <td class="td-unidades" data-label="Unidades Permitidas">
                         <span th:each="unidade, iterStat : ${u.unidades}"
                               th:text="${unidade.descricao + (!iterStat.last ? ', ' : '')}">HC1</span>
                     </td>

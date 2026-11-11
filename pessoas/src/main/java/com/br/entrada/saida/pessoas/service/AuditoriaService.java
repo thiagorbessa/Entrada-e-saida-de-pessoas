@@ -13,6 +13,11 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.sql.ResultSet;
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -25,6 +30,10 @@ public class AuditoriaService {
 
     private final LogAuditoriaRepository logRepository;
     private final JdbcTemplate jdbcTemplate; // Injeção necessária para consultar as tabelas dinâmicas de backup
+
+    // ==========================================
+    // MÉTODOS ORIGINAIS (SEM ALTERAÇÃO)
+    // ==========================================
 
     @Transactional
     public void registrar(Usuario usuario, String acao, String entidade, UUID entidadeId, String descricao, String detalhes) {
@@ -103,7 +112,71 @@ public class AuditoriaService {
         return logRepository.findAllByOrderByDataHoraDesc(pageable);
     }
 
-    // Método para buscar logs das tabelas de backup anuais no banco MySQL
+    // ==========================================
+    // HELPERS NOVOS DE LEITURA DO ResultSet
+    // Cada coluna candidata tem seu próprio try/catch: no MySQL Connector/J,
+    // ler uma coluna inexistente LANÇA exceção (não devolve null).
+    // ==========================================
+
+    private LocalDateTime lerDataHora(ResultSet rs, String... colunas) {
+        for (String c : colunas) {
+            try {
+                Object v = rs.getObject(c);
+                if (v == null) continue;
+                if (v instanceof Timestamp t) return t.toLocalDateTime();
+                if (v instanceof LocalDateTime l) return l;
+                return LocalDateTime.parse(v.toString().trim().replace(" ", "T"));
+            } catch (Exception ignored) {
+                // coluna inexistente ou formato inválido: tenta a próxima
+            }
+        }
+        return null;
+    }
+
+    private String lerString(ResultSet rs, String... colunas) {
+        for (String c : colunas) {
+            try {
+                String v = rs.getString(c);
+                if (v != null) return v;
+            } catch (Exception ignored) {
+                // coluna inexistente: tenta a próxima
+            }
+        }
+        return null;
+    }
+
+    // Lê UUID tanto de coluna CHAR(36) quanto BINARY(16)
+    private UUID lerUuid(ResultSet rs, String... colunas) {
+        for (String c : colunas) {
+            try {
+                byte[] bytes = rs.getBytes(c);
+                if (bytes == null) continue;
+                if (bytes.length == 16) {
+                    ByteBuffer bb = ByteBuffer.wrap(bytes);
+                    return new UUID(bb.getLong(), bb.getLong());
+                }
+                return UUID.fromString(new String(bytes, StandardCharsets.UTF_8).trim());
+            } catch (Exception ignored) {
+                // coluna inexistente ou valor inválido: tenta a próxima
+            }
+        }
+        return null;
+    }
+
+    private Unidade lerUnidade(ResultSet rs) {
+        String s = lerString(rs, "unidade");
+        if (s == null || s.isBlank()) return null;
+        try {
+            return Unidade.valueOf(s.trim());
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    // ==========================================
+    // BACKUP DE LOGS (ALTERADO)
+    // ==========================================
+
     public List<LogAuditoria> listarLogsPorAnoBackup(int ano) {
         // Tenta buscar em 'logs_' + ano, e se falhar tenta 'log_auditoria_' + ano
         String[] possiveisTabelas = {"logs_" + ano, "log_auditoria_" + ano, "auditoria_logs_" + ano};
@@ -113,17 +186,15 @@ public class AuditoriaService {
             try {
                 List<LogAuditoria> resultado = jdbcTemplate.query(sql, (rs, rowNum) -> {
                     LogAuditoria log = new LogAuditoria();
-                    try { if (rs.getString("id") != null) log.setId(UUID.fromString(rs.getString("id"))); } catch (Exception ignored) {}
-                    try {
-                        if (rs.getTimestamp("dataHora") != null) log.setDataHora(rs.getTimestamp("dataHora").toLocalDateTime());
-                        else if (rs.getTimestamp("data_hora") != null) log.setDataHora(rs.getTimestamp("data_hora").toLocalDateTime());
-                    } catch (Exception ignored) {}
-                    try { log.setUsuarioCpf(rs.getString("usuarioCpf") != null ? rs.getString("usuarioCpf") : rs.getString("usuario_cpf")); } catch (Exception ignored) {}
-                    try { log.setUsuarioNome(rs.getString("usuarioNome") != null ? rs.getString("usuarioNome") : rs.getString("usuario_nome")); } catch (Exception ignored) {}
-                    try { log.setAcao(rs.getString("acao")); } catch (Exception ignored) {}
-                    try { log.setEntidade(rs.getString("entidade")); } catch (Exception ignored) {}
-                    try { log.setEntidadeDescricao(rs.getString("entidadeDescricao") != null ? rs.getString("entidadeDescricao") : rs.getString("entidade_descricao")); } catch (Exception ignored) {}
-                    try { log.setDetalhes(rs.getString("detalhes")); } catch (Exception ignored) {}
+                    UUID id = lerUuid(rs, "id");
+                    if (id != null) log.setId(id);
+                    log.setDataHora(lerDataHora(rs, "data_hora", "dataHora"));
+                    log.setUsuarioCpf(lerString(rs, "usuario_cpf", "usuarioCpf"));
+                    log.setUsuarioNome(lerString(rs, "usuario_nome", "usuarioNome"));
+                    log.setAcao(lerString(rs, "acao"));
+                    log.setEntidade(lerString(rs, "entidade"));
+                    log.setEntidadeDescricao(lerString(rs, "entidade_descricao", "entidadeDescricao"));
+                    log.setDetalhes(lerString(rs, "detalhes"));
                     return log;
                 });
                 if (resultado != null && !resultado.isEmpty()) {
@@ -135,7 +206,7 @@ public class AuditoriaService {
     }
 
     // ==========================================
-    // MÉTODOS DE BACKUP PARA PESSOAS E HISTÓRICO
+    // MÉTODOS DE BACKUP PARA PESSOAS E HISTÓRICO (ALTERADOS)
     // ==========================================
 
     public List<Pessoa> listarPessoasPorAnoBackup(int ano) {
@@ -143,41 +214,7 @@ public class AuditoriaService {
         String sql = "SELECT * FROM " + nomeTabela + " ORDER BY nome ASC";
 
         try {
-            return jdbcTemplate.query(sql, (rs, rowNum) -> {
-                Pessoa pessoa = new Pessoa();
-
-                try {
-                    String idStr = null;
-                    try { idStr = rs.getString("id"); } catch (Exception e) {}
-                    if (idStr == null) {
-                        try { idStr = rs.getString("ID"); } catch (Exception e) {}
-                    }
-                    if (idStr != null && !idStr.isBlank()) {
-                        pessoa.setId(UUID.fromString(idStr));
-                    }
-                } catch (Exception e) {
-                    pessoa.setId(UUID.randomUUID());
-                }
-
-                try { pessoa.setCpf(rs.getString("cpf") != null ? rs.getString("cpf") : rs.getString("documento")); } catch (Exception ignored) {}
-                try { pessoa.setIdentidade(rs.getString("identidade")); } catch (Exception ignored) {}
-                try { pessoa.setNome(rs.getString("nome")); } catch (Exception ignored) {}
-                try { pessoa.setTelefone(rs.getString("telefone")); } catch (Exception ignored) {}
-
-                try {
-                    String unidadeStr = rs.getString("unidade");
-                    if (unidadeStr != null && !unidadeStr.isBlank()) {
-                        pessoa.setUnidade(Unidade.valueOf(unidadeStr));
-                    }
-                } catch (Exception ignored) {}
-
-                try { pessoa.setSetor(rs.getString("setor")); } catch (Exception ignored) {}
-                try { pessoa.setAndar(rs.getString("andar")); } catch (Exception ignored) {}
-                try { pessoa.setPaciente(rs.getString("paciente")); } catch (Exception ignored) {}
-                try { pessoa.setObservacao(rs.getString("observacao")); } catch (Exception ignored) {}
-
-                return pessoa;
-            });
+            return jdbcTemplate.query(sql, (rs, rowNum) -> mapearPessoa(rs));
         } catch (Exception e) {
             System.err.println("Erro ao listar pessoas do backup para o ano " + ano + ": " + e.getMessage());
             return new ArrayList<>();
@@ -187,211 +224,87 @@ public class AuditoriaService {
     public Pessoa buscarPessoaPorIdNoBackup(UUID pessoaId, int ano) {
         String nomeTabela = "pessoas_" + ano;
 
-        String sqlId = "SELECT * FROM " + nomeTabela + " WHERE id = ?";
+        // Funciona para id CHAR(36) (texto) e BINARY(16) (bytes): só uma das duas condições casa.
+        String sql = "SELECT * FROM " + nomeTabela +
+                " WHERE id = ? OR id = UNHEX(REPLACE(?, '-', '')) LIMIT 1";
         try {
-            List<Pessoa> lista = jdbcTemplate.query(sqlId, new Object[]{pessoaId.toString()}, (rs, rowNum) -> mapearPessoa(rs));
+            String idStr = pessoaId.toString();
+            List<Pessoa> lista = jdbcTemplate.query(sql, (rs, rowNum) -> mapearPessoa(rs), idStr, idStr);
             if (!lista.isEmpty()) {
                 return lista.get(0);
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            System.err.println("Erro ao buscar pessoa no backup " + ano + ": " + e.getMessage());
+        }
 
-        String sqlGeral = "SELECT * FROM " + nomeTabela + " LIMIT 1";
-        try {
-            List<Pessoa> listaGeral = jdbcTemplate.query(sqlGeral, (rs, rowNum) -> mapearPessoa(rs));
-            if (!listaGeral.isEmpty()) {
-                return listaGeral.get(0);
-            }
-        } catch (Exception ignored) {}
-
+        // Não devolve mais "a primeira pessoa da tabela": isso exibia dados de outra pessoa.
         Pessoa pessoaFallback = new Pessoa();
         pessoaFallback.setId(pessoaId);
         pessoaFallback.setNome("Pessoa Arquivada");
         return pessoaFallback;
     }
 
-    private Pessoa mapearPessoa(java.sql.ResultSet rs) throws java.sql.SQLException {
+    private Pessoa mapearPessoa(ResultSet rs) {
         Pessoa pessoa = new Pessoa();
-        try { pessoa.setId(UUID.fromString(rs.getString("id"))); } catch (Exception ignored) {}
-        try { pessoa.setCpf(rs.getString("cpf") != null ? rs.getString("cpf") : rs.getString("documento")); } catch (Exception ignored) {}
-        try { pessoa.setIdentidade(rs.getString("identidade")); } catch (Exception ignored) {}
-        try { pessoa.setNome(rs.getString("nome")); } catch (Exception ignored) {}
-        try { pessoa.setTelefone(rs.getString("telefone")); } catch (Exception ignored) {}
-        try {
-            String unidadeStr = rs.getString("unidade");
-            if (unidadeStr != null && !unidadeStr.isBlank()) {
-                pessoa.setUnidade(Unidade.valueOf(unidadeStr));
-            }
-        } catch (Exception ignored) {}
-        try { pessoa.setSetor(rs.getString("setor")); } catch (Exception ignored) {}
-        try { pessoa.setAndar(rs.getString("andar")); } catch (Exception ignored) {}
-        try { pessoa.setPaciente(rs.getString("paciente")); } catch (Exception ignored) {}
-        try { pessoa.setObservacao(rs.getString("observacao")); } catch (Exception ignored) {}
+        pessoa.setId(lerUuid(rs, "id", "ID"));
+
+        String cpf = lerString(rs, "cpf");
+        pessoa.setCpf(cpf != null ? cpf : lerString(rs, "documento"));
+        pessoa.setIdentidade(lerString(rs, "identidade"));
+        pessoa.setNome(lerString(rs, "nome"));
+        pessoa.setTelefone(lerString(rs, "telefone"));
+        pessoa.setUnidade(lerUnidade(rs));
+        pessoa.setSetor(lerString(rs, "setor"));
+        pessoa.setAndar(lerString(rs, "andar"));
+        pessoa.setPaciente(lerString(rs, "paciente"));
+        pessoa.setObservacao(lerString(rs, "observacao"));
         return pessoa;
     }
 
     public List<Registro> listarRegistrosPorPessoaEAnodeBackup(UUID pessoaId, int ano) {
         String nomeTabela = "registros_" + ano;
 
-        // Query com filtro seguro por pessoa_id e LEFT JOIN correto para os operadores
-        String sql = "SELECT r.*, ue.nome_completo as nome_entrada, us.nome_completo as nome_saida " +
+        // WHERE novo: filtra pela pessoa (antes devolvia os registros de TODAS as pessoas).
+        // As duas condições cobrem pessoa_id CHAR(36) e BINARY(16).
+        String sql = "SELECT r.*, ue.nome_completo AS nome_entrada, us.nome_completo AS nome_saida " +
                 "FROM " + nomeTabela + " r " +
                 "LEFT JOIN usuarios ue ON r.usuario_entrada_id = ue.id " +
                 "LEFT JOIN usuarios us ON r.usuario_saida_id = us.id " +
-                "WHERE r.pessoa_id = ? ORDER BY r.id DESC";
+                "WHERE r.pessoa_id = ? OR r.pessoa_id = UNHEX(REPLACE(?, '-', '')) " +
+                "ORDER BY r.hora_entrada DESC";
 
         try {
-            List<Registro> lista = jdbcTemplate.query(sql, new Object[]{pessoaId != null ? pessoaId.toString() : ""}, (rs, rowNum) -> {
+            String idStr = pessoaId.toString();
+            return jdbcTemplate.query(sql, (rs, rowNum) -> {
                 Registro registro = new Registro();
 
-                try { registro.setId(UUID.fromString(rs.getString("id"))); } catch (Exception ignored) {}
+                registro.setId(lerUuid(rs, "id"));
+                registro.setHoraEntrada(lerDataHora(rs, "hora_entrada", "horaEntrada"));
+                registro.setHoraSaida(lerDataHora(rs, "hora_saida", "horaSaida"));
+                registro.setUnidade(lerUnidade(rs));
+                registro.setSetor(lerString(rs, "setor"));
+                registro.setAndar(lerString(rs, "andar"));
+                registro.setPaciente(lerString(rs, "paciente"));
 
-                // Hora de Entrada
-                try {
-                    if (rs.getTimestamp("horaEntrada") != null) {
-                        registro.setHoraEntrada(rs.getTimestamp("horaEntrada").toLocalDateTime());
-                    }
-                } catch (Exception e1) {
-                    try {
-                        if (rs.getTimestamp("hora_entrada") != null) {
-                            registro.setHoraEntrada(rs.getTimestamp("hora_entrada").toLocalDateTime());
-                        }
-                    } catch (Exception ignored) {}
+                String nomeEntrada = lerString(rs, "nome_entrada");
+                if (nomeEntrada != null && !nomeEntrada.isBlank()) {
+                    Usuario opEntrada = new Usuario();
+                    opEntrada.setNomeCompleto(nomeEntrada);
+                    registro.setUsuarioEntrada(opEntrada);
                 }
 
-                // Hora de Saída
-                try {
-                    if (rs.getTimestamp("horaSaida") != null) {
-                        registro.setHoraSaida(rs.getTimestamp("horaSaida").toLocalDateTime());
-                    }
-                } catch (Exception e1) {
-                    try {
-                        if (rs.getTimestamp("hora_saida") != null) {
-                            registro.setHoraSaida(rs.getTimestamp("hora_saida").toLocalDateTime());
-                        }
-                    } catch (Exception ignored) {}
+                String nomeSaida = lerString(rs, "nome_saida");
+                if (nomeSaida != null && !nomeSaida.isBlank()) {
+                    Usuario opSaida = new Usuario();
+                    opSaida.setNomeCompleto(nomeSaida);
+                    registro.setUsuarioSaida(opSaida);
                 }
 
-                try {
-                    String unidadeStr = rs.getString("unidade");
-                    if (unidadeStr != null && !unidadeStr.isBlank()) {
-                        registro.setUnidade(Unidade.valueOf(unidadeStr));
-                    }
-                } catch (Exception ignored) {}
-
-                try { registro.setSetor(rs.getString("setor")); } catch (Exception ignored) {}
-                try { registro.setAndar(rs.getString("andar")); } catch (Exception ignored) {}
-                try { registro.setPaciente(rs.getString("paciente")); } catch (Exception ignored) {}
-
-                // Operador de Entrada
-                try {
-                    String nomeEntrada = rs.getString("nome_entrada");
-                    if (nomeEntrada != null && !nomeEntrada.isBlank()) {
-                        Usuario opEntrada = new Usuario();
-                        opEntrada.setNomeCompleto(nomeEntrada);
-                        registro.setUsuarioEntrada(opEntrada);
-                    }
-                } catch (Exception ignored) {}
-
-                // Operador de Saída
-                try {
-                    String nomeSaida = rs.getString("nome_saida");
-                    if (nomeSaida != null && !nomeSaida.isBlank()) {
-                        Usuario opSaida = new Usuario();
-                        opSaida.setNomeCompleto(nomeSaida);
-                        registro.setUsuarioSaida(opSaida);
-                    }
-                } catch (Exception ignored) {}
-
                 return registro;
-            });
-
-            if (lista != null && !lista.isEmpty()) {
-                return lista;
-            }
+            }, idStr, idStr);
         } catch (Exception e) {
-            System.err.println("Erro ao buscar registros com filtro: " + e.getMessage());
-        }
-
-        // Fallback de segurança caso o UUID exato da pessoa não bati na tabela clonada: traz todos os registros do ano
-        String sqlGeral = "SELECT r.*, ue.nome_completo as nome_entrada, us.nome_completo as nome_saida " +
-                "FROM " + nomeTabela + " r " +
-                "LEFT JOIN usuarios ue ON r.usuario_entrada_id = ue.id " +
-                "LEFT JOIN usuarios us ON r.usuario_saida_id = us.id " +
-                "ORDER BY r.id DESC";
-
-        try {
-            return jdbcTemplate.query(sqlGeral, (rs, rowNum) -> {
-                Registro registro = new Registro();
-                try { registro.setId(UUID.fromString(rs.getString("id"))); } catch (Exception ignored) {}
-                try {
-                    if (rs.getTimestamp("horaEntrada") != null) registro.setHoraEntrada(rs.getTimestamp("horaEntrada").toLocalDateTime());
-                    else if (rs.getTimestamp("hora_entrada") != null) registro.setHoraEntrada(rs.getTimestamp("hora_entrada").toLocalDateTime());
-                } catch (Exception ignored) {}
-                try {
-                    if (rs.getTimestamp("horaSaida") != null) registro.setHoraSaida(rs.getTimestamp("horaSaida").toLocalDateTime());
-                    else if (rs.getTimestamp("hora_saida") != null) registro.setHoraSaida(rs.getTimestamp("hora_saida").toLocalDateTime());
-                } catch (Exception ignored) {}
-                try {
-                    String unidadeStr = rs.getString("unidade");
-                    if (unidadeStr != null && !unidadeStr.isBlank()) registro.setUnidade(Unidade.valueOf(unidadeStr));
-                } catch (Exception ignored) {}
-                try { registro.setSetor(rs.getString("setor")); } catch (Exception ignored) {}
-                try { registro.setAndar(rs.getString("andar")); } catch (Exception ignored) {}
-                try { registro.setPaciente(rs.getString("paciente")); } catch (Exception ignored) {}
-                try {
-                    String nomeEntrada = rs.getString("nome_entrada");
-                    if (nomeEntrada != null && !nomeEntrada.isBlank()) {
-                        Usuario opEntrada = new Usuario();
-                        opEntrada.setNomeCompleto(nomeEntrada);
-                        registro.setUsuarioEntrada(opEntrada);
-                    }
-                } catch (Exception ignored) {}
-                try {
-                    String nomeSaida = rs.getString("nome_saida");
-                    if (nomeSaida != null && !nomeSaida.isBlank()) {
-                        Usuario opSaida = new Usuario();
-                        opSaida.setNomeCompleto(nomeSaida);
-                        registro.setUsuarioSaida(opSaida);
-                    }
-                } catch (Exception ignored) {}
-                return registro;
-            });
-        } catch (Exception e) {
+            System.err.println("Erro ao listar registros de backup para o ano " + ano + ": " + e.getMessage());
             return new ArrayList<>();
         }
-    }
-
-    private Registro mapearRegistroBackup(java.sql.ResultSet rs) throws java.sql.SQLException {
-        Registro registro = new Registro();
-        try { registro.setId(UUID.fromString(rs.getString("id"))); } catch (Exception ignored) {}
-
-        try {
-            if (rs.getTimestamp("horaEntrada") != null) {
-                registro.setHoraEntrada(rs.getTimestamp("horaEntrada").toLocalDateTime());
-            } else if (rs.getTimestamp("hora_entrada") != null) {
-                registro.setHoraEntrada(rs.getTimestamp("hora_entrada").toLocalDateTime());
-            }
-        } catch (Exception ignored) {}
-
-        try {
-            if (rs.getTimestamp("horaSaida") != null) {
-                registro.setHoraSaida(rs.getTimestamp("horaSaida").toLocalDateTime());
-            } else if (rs.getTimestamp("hora_saida") != null) {
-                registro.setHoraSaida(rs.getTimestamp("hora_saida").toLocalDateTime());
-            }
-        } catch (Exception ignored) {}
-
-        try {
-            String unidadeStr = rs.getString("unidade");
-            if (unidadeStr != null && !unidadeStr.isBlank()) {
-                registro.setUnidade(Unidade.valueOf(unidadeStr));
-            }
-        } catch (Exception ignored) {}
-
-        try { registro.setSetor(rs.getString("setor")); } catch (Exception ignored) {}
-        try { registro.setAndar(rs.getString("andar")); } catch (Exception ignored) {}
-        try { registro.setPaciente(rs.getString("paciente")); } catch (Exception ignored) {}
-
-        return registro;
     }
 }

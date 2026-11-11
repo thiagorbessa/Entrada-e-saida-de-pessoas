@@ -1,0 +1,51 @@
+@echo off
+REM Backup fisico do banco MySQL que roda em container Docker (Windows).
+REM Gera um arquivo .sql que pode ser restaurado pela tela de backup do sistema
+REM ("Importar backup").
+REM
+REM Uso: de dois cliques ou rode backup-banco.bat
+REM Agendar: Agendador de Tarefas do Windows apontando para este arquivo.
+REM Obs.: se a senha tiver os caracteres % & ^ ! o .bat pode interpretar errado; prefira uma senha sem eles.
+
+setlocal
+
+REM ==================== CONFIGURACAO (Preenchido) ====================
+set "CONTAINER=mysql_db"
+set "DB_NAME=entrada_saida_pessoas"
+set "DB_USER=root"
+set "DB_PASS=root"
+set "DESTINO=%~dp0backups"
+set "DIAS_RETENCAO=30"
+REM DIAS_RETENCAO: apaga backups com mais de N dias; 0 = nunca apagar
+REM ===============================================================
+
+if not exist "%DESTINO%" mkdir "%DESTINO%"
+
+for /f %%i in ('powershell -NoProfile -Command "Get-Date -Format yyyy-MM-dd_HH-mm-ss"') do set "TS=%%i"
+set "ARQ=%DESTINO%\backup_%DB_NAME%_%TS%.sql"
+
+echo Gerando backup em: %ARQ%
+
+REM A senha vai por variavel de ambiente (MYSQL_PWD) para nao aparecer na lista de processos.
+docker exec -e "MYSQL_PWD=%DB_PASS%" %CONTAINER% mysqldump -u %DB_USER% --single-transaction --no-tablespaces --default-character-set=utf8mb4 %DB_NAME% > "%ARQ%"
+if errorlevel 1 (
+    echo ERRO: mysqldump falhou.
+    del "%ARQ%" 2>nul
+    exit /b 1
+)
+
+REM O mysqldump termina com "-- Dump completed on ..."; se nao estiver no arquivo, ele esta truncado.
+findstr /C:"Dump completed" "%ARQ%" >nul
+if errorlevel 1 (
+    echo ERRO: o arquivo gerado parece incompleto.
+    del "%ARQ%" 2>nul
+    exit /b 1
+)
+
+if not "%DIAS_RETENCAO%"=="0" (
+    forfiles /p "%DESTINO%" /m "backup_%DB_NAME%_*.sql" /d -%DIAS_RETENCAO% /c "cmd /c del @path" >nul 2>&1
+)
+
+echo OK: backup concluido.
+endlocal
+exit /b 0

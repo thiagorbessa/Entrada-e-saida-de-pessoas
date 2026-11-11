@@ -33,6 +33,16 @@
 
         <div class="tabela-responsiva tabela-pessoas-responsiva">
             <table id="tabela-pessoas">
+                <colgroup>
+                    <col style="width: 12%">
+                    <col style="width: 22%">
+                    <col style="width: 12%">
+                    <col style="width: 8%">
+                    <col style="width: 10%">
+                    <col style="width: 6%">
+                    <col style="width: 18%">
+                    <col style="width: 12%">
+                </colgroup>
                 <thead>
                 <tr>
                     <th>Documento</th>
@@ -47,9 +57,9 @@
                 </thead>
                 <tbody>
                 <tr th:each="p : ${pessoas}">
-                    <td data-label="Documento" th:text="${p.cpf != null && !p.cpf.isBlank() ? p.cpf : p.identidade}"></td>
-                    <td class="font-weight-600" data-label="Nome" th:text="${p.nome}"></td>
-                    <td data-label="Telefone" th:text="${p.telefone}"></td>
+                    <td class="td-nowrap" data-label="Documento" th:text="${p.cpf != null && !p.cpf.isBlank() ? p.cpf : p.identidade}"></td>
+                    <td class="font-weight-600 td-nome" data-label="Nome" th:text="${p.nome}" th:title="${p.nome}"></td>
+                    <td class="td-nowrap" data-label="Telefone" th:text="${p.telefone}"></td>
                     <td data-label="Unidade" th:text="${p.unidade}"></td>
                     <td data-label="Setor" th:text="${p.setor}"></td>
                     <td data-label="Andar" th:text="${p.andar}"></td>

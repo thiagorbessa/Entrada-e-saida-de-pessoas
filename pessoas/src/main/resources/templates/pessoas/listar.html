@@ -54,8 +54,8 @@
         <!-- Campo de Pesquisa em Tempo Real Centralizado -->
         <div class="busca-container">
             <div class="busca-wrapper">
-                <input type="text" id="busca" placeholder="Buscar por nome, CPF, RG ou telefone" autocomplete="off" />
-                <a id="limpar-busca" href="javascript:void(0)">Limpar</a>
+                <input type="text" id="busca" class="campo-busca" placeholder="Buscar por nome, CPF, RG ou telefone" autocomplete="off" />
+                <a id="limpar-busca" class="btn-busca-limpar" href="javascript:void(0)">Limpar</a>
             </div>
         </div>
 
@@ -78,6 +78,37 @@
         <!-- Tabela tradicional em telas largas e cartões em telas menores -->
         <div class="tabela-responsiva tabela-pessoas-responsiva">
             <table id="tabela-pessoas" th:fragment="tabela">
+                <colgroup sec:authorize="hasAnyRole('SISTEMA', 'GERAL')">
+                    <col style="width: 7.5%">
+                    <col style="width: 8%">
+                    <col style="width: 8%">
+                    <col style="width: 5.5%">
+                    <col style="width: 5%">
+                    <col style="width: 4.5%">
+                    <col style="width: 6%">
+                    <col style="width: 9%">
+                    <col style="width: 9%">
+                    <col style="width: 10%">
+                    <col style="width: 8.5%">
+                    <col style="width: 6%">
+                    <col style="width: 5%">
+                    <col style="width: 7%">
+                </colgroup>
+                <colgroup sec:authorize="!hasAnyRole('SISTEMA', 'GERAL')">
+                    <col style="width: 8%">
+                    <col style="width: 9%">
+                    <col style="width: 8%">
+                    <col style="width: 6%">
+                    <col style="width: 5%">
+                    <col style="width: 5%">
+                    <col style="width: 6%">
+                    <col style="width: 9%">
+                    <col style="width: 9%">
+                    <col style="width: 10%">
+                    <col style="width: 9%">
+                    <col style="width: 7%">
+                    <col style="width: 9%">
+                </colgroup>
                 <thead>
                 <tr>
                     <th><button type="button" class="btn-ordenar" onclick="ordenarTabela(0)">Documento ↕</button></th>
@@ -93,14 +124,14 @@
                     <th><button type="button" class="btn-ordenar" onclick="ordenarTabela(10)">Observação ↕</button></th>
                     <th style="text-align: center; color: white; font-weight: 600; padding: 10px 8px;">Histórico</th>
                     <th style="text-align: center; color: white; font-weight: 600; padding: 10px 8px;">Editar</th>
-                    <th style="text-align: center; color: white; font-weight: 600; padding: 10px 8px;" sec:authorize="hasAnyRole('SISTEMA', 'GERAL')">Remover</th>
+                    <th class="th-remover" style="text-align: center; color: white; font-weight: 600; padding: 10px 8px;" sec:authorize="hasAnyRole('SISTEMA', 'GERAL')">Remover</th>
                 </tr>
                 </thead>
                 <tbody>
                 <tr th:each="p : ${pessoas}">
-                    <td data-label="Documento" th:text="${p.cpf != null && !p.cpf.isBlank() ? p.cpf : p.identidade}"></td>
-                    <td class="font-weight-600" data-label="Nome" th:text="${p.nome}" th:title="${p.nome}"></td>
-                    <td data-label="Telefone" th:text="${p.telefone}"></td>
+                    <td class="td-nowrap" data-label="Documento" th:text="${p.cpf != null && !p.cpf.isBlank() ? p.cpf : p.identidade}"></td>
+                    <td class="font-weight-600 td-nome" data-label="Nome" th:text="${p.nome}" th:title="${p.nome}"></td>
+                    <td class="td-nowrap" data-label="Telefone" th:text="${p.telefone}"></td>
                     <td data-label="Unidade" th:text="${p.unidade}"></td>
                     <td data-label="Setor" th:text="${p.setor}"></td>
                     <td data-label="Andar" th:text="${p.andar}"></td>
@@ -108,8 +139,8 @@
 
                     <!-- Registro em Aberto -->
                     <th:block th:with="reg=${registrosAbertos != null ? registrosAbertos.get(p.id) : null}">
-                        <td data-label="Hora de entrada" th:text="${reg != null ? #temporals.format(reg.horaEntrada, 'dd/MM/yyyy HH:mm') : '-'}"></td>
-                        <td data-label="Hora de saída" th:text="${reg != null && reg.horaSaida != null ? #temporals.format(reg.horaSaida, 'dd/MM/yyyy HH:mm') : '-'}"></td>
+                        <td class="td-nowrap" data-label="Hora de entrada" th:text="${reg != null ? #temporals.format(reg.horaEntrada, 'dd/MM/yyyy HH:mm') : '-'}"></td>
+                        <td class="td-nowrap" data-label="Hora de saída" th:text="${reg != null && reg.horaSaida != null ? #temporals.format(reg.horaSaida, 'dd/MM/yyyy HH:mm') : '-'}"></td>
                         <td data-label="Ação" style="text-align: center;">
                             <form th:if="${reg == null}" th:action="@{/registros/entrada}" method="post" style="display:inline;">
                                 <input type="hidden" name="pessoaId" th:value="${p.id}" />
@@ -136,7 +167,7 @@
                     <td data-label="Editar" style="text-align: center;">
                         <a th:href="@{/pessoas/{id}/editar(id=${p.id})}" class="link-acao">Editar</a>
                     </td>
-                    <td data-label="Remover" style="text-align: center;" sec:authorize="hasAnyRole('SISTEMA', 'GERAL')">
+                    <td class="td-remover" data-label="Remover" style="text-align: center;" sec:authorize="hasAnyRole('SISTEMA', 'GERAL')">
                         <form th:action="@{/pessoas/{id}(id=${p.id})}" th:method="delete" style="display: inline;"
                               onsubmit="return confirm('Tem certeza de que deseja remover permanentemente este cadastro?');">
                             <button type="submit" class="btn-acao btn-remover">Remover</button>
