@@ -39,8 +39,32 @@ public interface PessoaRepository extends JpaRepository<Pessoa, UUID> {
     // Método original (mantido)
     List<Pessoa> findByUnidadeIn(Set<Unidade> unidades);
 
-    // Versão paginada exigida pelo PessoaService para suportar os 100 itens por página
+    // Versão paginada exigida pelo PessoaService
     Page<Pessoa> findByUnidadeIn(Set<Unidade> unidades, Pageable pageable);
+
+    // ==========================================================
+    // MÉTODOS PAGINADOS PARA A BARRA DE BUSCA
+    // ==========================================================
+    @Query("""
+        SELECT p FROM Pessoa p
+        WHERE LOWER(p.nome) LIKE LOWER(CONCAT('%', :termo, '%'))
+           OR LOWER(p.cpf) LIKE LOWER(CONCAT('%', :termo, '%'))
+           OR LOWER(p.identidade) LIKE LOWER(CONCAT('%', :termo, '%'))
+           OR LOWER(p.telefone) LIKE LOWER(CONCAT('%', :termo, '%'))
+    """)
+    Page<Pessoa> buscarPorTermoPaginado(@Param("termo") String termo, Pageable pageable);
+
+    @Query("""
+        SELECT p FROM Pessoa p
+        WHERE p.unidade IN :unidades
+          AND (
+               LOWER(p.nome) LIKE LOWER(CONCAT('%', :termo, '%'))
+            OR LOWER(p.cpf) LIKE LOWER(CONCAT('%', :termo, '%'))
+            OR LOWER(p.identidade) LIKE LOWER(CONCAT('%', :termo, '%'))
+            OR LOWER(p.telefone) LIKE LOWER(CONCAT('%', :termo, '%'))
+          )
+    """)
+    Page<Pessoa> buscarPorTermoEUnidadesPaginado(@Param("termo") String termo, @Param("unidades") Set<Unidade> unidades, Pageable pageable);
 
     Optional<Pessoa> findByCpf(String cpf);
     boolean existsByCpf(String cpf);

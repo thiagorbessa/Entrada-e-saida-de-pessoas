@@ -156,4 +156,19 @@ public class PessoaService {
         auditoriaService.registrar(usuarioLogado, "EXCLUSAO", "PESSOA", pessoa.getId(), pessoa.getNome(), "Excluiu o registro da pessoa");
         pessoaRepository.delete(pessoa);
     }
+    @Transactional(readOnly = true)
+    public Page<Pessoa> buscarPorTermoEUsuarioPaginado(String termo, Usuario usuario, Pageable pageable) {
+        if (termo == null || termo.isBlank()) {
+            return listarPorUsuarioPaginado(usuario, pageable);
+        }
+
+        if (isAdmin(usuario)) {
+            return pessoaRepository.buscarPorTermoPaginado(termo, pageable);
+        }
+
+        if (usuario == null || usuario.getUnidades() == null || usuario.getUnidades().isEmpty()) {
+            return Page.empty(pageable);
+        }
+        return pessoaRepository.buscarPorTermoEUnidadesPaginado(termo, usuario.getUnidades(), pageable);
+    }
 }

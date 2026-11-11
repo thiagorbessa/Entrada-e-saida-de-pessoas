@@ -59,59 +59,67 @@ public class PessoaController {
 		model.addAttribute("usuarioLogado", usuarioLogado);
 	}
 
-	// Listagem principal configurada para exibir 100 pessoas por página
+	// Em @GetMapping (/pessoas)
 	@GetMapping
 	public String listar(
-			@PageableDefault(page = 0, size = 100, sort = "nome", direction = Sort.Direction.ASC) Pageable pageable,
-			Model model, Principal principal) {
+			@RequestParam(value = "termo", required = false) String termo,
+			@PageableDefault(page = 0, size = 30, sort = "nome", direction = Sort.Direction.ASC) Pageable pageable,
+			Model model,
+			Principal principal) {
 
-		Usuario usuarioLogado = obterUsuarioLogado(principal);
-		Page<Pessoa> paginaPessoas = pessoaService.listarPorUsuarioPaginado(usuarioLogado, pageable);
+		Usuario usuario = obterUsuarioLogado(principal);
+		Page<Pessoa> paginaPessoas = pessoaService.buscarPorTermoEUsuarioPaginado(termo, usuario, pageable);
 
-		List<Pessoa> pessoas = paginaPessoas.getContent();
-		model.addAttribute("pessoas", pessoas);
-		model.addAttribute("paginaPessoas", paginaPessoas);
-		model.addAttribute("currentPage", pageable.getPageNumber());
-		model.addAttribute("totalPages", paginaPessoas.getTotalPages());
-		model.addAttribute("totalItems", paginaPessoas.getTotalElements());
-
-		// Mapeia o ÚLTIMO REGISTRO de cada pessoa (aberto ou fechado) para exibir na tabela
+		// Mapeia o ÚLTIMO REGISTRO de cada pessoa (seja em aberto ou finalizado)
 		Map<UUID, Registro> ultimosRegistros = new HashMap<>();
-		if (pessoas != null) {
-			for (Pessoa p : pessoas) {
-				if (p != null && p.getId() != null) {
-					Registro ultimo = registroService.buscarUltimoRegistroDaPessoa(p.getId());
-					if (ultimo != null) {
-						ultimosRegistros.put(p.getId(), ultimo);
-					}
-				}
+		for (Pessoa p : paginaPessoas.getContent()) {
+			Registro ultimo = registroService.buscarUltimoRegistroDaPessoa(p.getId());
+			if (ultimo != null) {
+				ultimosRegistros.put(p.getId(), ultimo);
 			}
 		}
+
+		int startElement = paginaPessoas.getTotalElements() == 0 ? 0 : (pageable.getPageNumber() * pageable.getPageSize()) + 1;
+		long endElement = Math.min((long) (pageable.getPageNumber() + 1) * pageable.getPageSize(), paginaPessoas.getTotalElements());
+
+		model.addAttribute("paginaPessoas", paginaPessoas);
+		model.addAttribute("pessoas", paginaPessoas.getContent());
 		model.addAttribute("ultimosRegistros", ultimosRegistros);
-		model.addAttribute("usuarioLogado", usuarioLogado);
+		model.addAttribute("currentPage", pageable.getPageNumber());
+		model.addAttribute("pageSize", pageable.getPageSize());
+		model.addAttribute("totalPages", paginaPessoas.getTotalPages());
+		model.addAttribute("totalElements", paginaPessoas.getTotalElements());
+		model.addAttribute("startElement", startElement);
+		model.addAttribute("endElement", endElement);
+		model.addAttribute("termo", termo);
+		model.addAttribute("usuarioLogado", usuario);
+
 		return "pessoas/listar";
 	}
 
+	// Em @GetMapping("/buscar")
 	@GetMapping("/buscar")
-	public String buscar(@RequestParam(value = "termo", required = false) String termo, Model model, Principal principal) {
-		Usuario usuarioLogado = obterUsuarioLogado(principal);
-		List<Pessoa> pessoas = pessoaService.buscarPorTermoEUsuario(termo, usuarioLogado);
-		model.addAttribute("pessoas", pessoas);
+	public String buscarParcial(
+			@RequestParam(value = "termo", required = false) String termo,
+			@PageableDefault(page = 0, size = 30, sort = "nome", direction = Sort.Direction.ASC) Pageable pageable,
+			Model model,
+			Principal principal) {
 
-		// Mapeia o ÚLTIMO REGISTRO de cada pessoa na busca em tempo real
+		Usuario usuario = obterUsuarioLogado(principal);
+		Page<Pessoa> paginaPessoas = pessoaService.buscarPorTermoEUsuarioPaginado(termo, usuario, pageable);
+
 		Map<UUID, Registro> ultimosRegistros = new HashMap<>();
-		if (pessoas != null) {
-			for (Pessoa p : pessoas) {
-				if (p != null && p.getId() != null) {
-					Registro ultimo = registroService.buscarUltimoRegistroDaPessoa(p.getId());
-					if (ultimo != null) {
-						ultimosRegistros.put(p.getId(), ultimo);
-					}
-				}
+		for (Pessoa p : paginaPessoas.getContent()) {
+			Registro ultimo = registroService.buscarUltimoRegistroDaPessoa(p.getId());
+			if (ultimo != null) {
+				ultimosRegistros.put(p.getId(), ultimo);
 			}
 		}
+
+		model.addAttribute("paginaPessoas", paginaPessoas);
+		model.addAttribute("pessoas", paginaPessoas.getContent());
 		model.addAttribute("ultimosRegistros", ultimosRegistros);
-		model.addAttribute("usuarioLogado", usuarioLogado);
+
 		return "pessoas/listar :: tabela";
 	}
 
@@ -170,7 +178,6 @@ public class PessoaController {
 			}
 		}
 
-		// Busca o último registro de entrada/saída para exibir no formulário
 		Registro ultimoRegistro = registroService.buscarUltimoRegistroDaPessoa(id);
 		model.addAttribute("ultimoRegistro", ultimoRegistro);
 
@@ -191,7 +198,6 @@ public class PessoaController {
 		return "pessoas/formulario";
 	}
 
-	// Histórico atualizado com paginação (100 registros por página) corrigido para 'horaEntrada'
 	@GetMapping("/{id}/historico")
 	public String historico(
 			@PathVariable UUID id,

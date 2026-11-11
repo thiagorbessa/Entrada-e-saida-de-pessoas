@@ -999,6 +999,78 @@ textarea.form-control { resize: vertical; min-height: 100px; }
 
 }
 
+/* ==========================================================
+   BARRA DE PAGINAÇÃO COMPLETA
+   ========================================================== */
+.paginacao-container {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 15px;
+	margin-top: 20px;
+	padding: 12px 16px;
+	background-color: #ffffff;
+	border: 1px solid var(--cor-tabela-borda);
+	border-radius: 8px;
+	font-size: 0.9rem;
+	color: #495057;
+}
+
+.paginacao-tamanho {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.paginacao-tamanho select {
+	padding: 4px 8px;
+	border: 1px solid #ced4da;
+	border-radius: 4px;
+	background: #fff;
+	cursor: pointer;
+}
+
+.paginacao-info {
+	color: #6c757d;
+}
+
+.paginacao-botoes {
+	display: flex;
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	gap: 4px;
+}
+
+.paginacao-botoes li a {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 32px;
+	height: 32px;
+	padding: 0 6px;
+	border-radius: 4px;
+	text-decoration: none;
+	color: #495057;
+	transition: background-color 0.2s;
+}
+
+.paginacao-botoes li a:hover {
+	background-color: #e9ecef;
+}
+
+.paginacao-botoes li.active a {
+	background-color: #f0ad4e; /* Cor amarelada/laranja igual à imagem */
+	color: #ffffff;
+	font-weight: 600;
+}
+
+.paginacao-botoes li.disabled a {
+	color: #ced4da;
+	pointer-events: none;
+	cursor: default;
+}
 
 /* ==========================================================
    TABELA DE PESSOAS — QUEBRA DE LINHA EM TODAS AS COLUNAS

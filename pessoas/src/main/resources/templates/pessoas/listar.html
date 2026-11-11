@@ -137,21 +137,23 @@
 
                     <!-- Exibição do Último Registro -->
                     <th:block th:with="reg=${ultimosRegistros != null ? ultimosRegistros.get(p.id) : null}">
-                        <!-- Hora Entrada: exibe se houver registro, senão exibe '-' -->
-                        <td class="td-nowrap" data-label="Hora de entrada" th:text="${reg != null ? #temporals.format(reg.horaEntrada, 'dd/MM/yyyy HH:mm') : '-'}"></td>
+                        <!-- Hora Entrada: exibe se houver qualquer registro prévio -->
+                        <td class="td-nowrap" data-label="Hora de entrada"
+                            th:text="${reg != null ? #temporals.format(reg.horaEntrada, 'dd/MM/yyyy HH:mm') : '-'}"></td>
 
-                        <!-- Hora Saída: exibe apenas se houver horaSaida preenchida, senão exibe '-' -->
-                        <td class="td-nowrap" data-label="Hora de saída" th:text="${reg != null && reg.horaSaida != null ? #temporals.format(reg.horaSaida, 'dd/MM/yyyy HH:mm') : '-'}"></td>
+                        <!-- Hora Saída: exibe a data/hora de saída se finalizado, ou '-' se estiver em aberto ou sem registro -->
+                        <td class="td-nowrap" data-label="Hora de saída"
+                            th:text="${reg != null && reg.horaSaida != null ? #temporals.format(reg.horaSaida, 'dd/MM/yyyy HH:mm') : '-'}"></td>
 
                         <!-- Botão de Ação -->
                         <td data-label="Ação" style="text-align: center;">
-                            <!-- Exibe "Registrar Entrada" se não houver registro OU se o último já tiver saída preenchida (entradas e saídas pares) -->
+                            <!-- Se NÃO tem registro OU se a última visita já teve saída (visita finalizada), exibe "Registrar Entrada" -->
                             <form th:if="${reg == null || reg.horaSaida != null}" th:action="@{/registros/entrada}" method="post" style="display:inline;">
                                 <input type="hidden" name="pessoaId" th:value="${p.id}" />
                                 <button type="submit" class="btn-acao btn-entrada">Registrar Entrada</button>
                             </form>
 
-                            <!-- Exibe "Registrar Saída" se houver registro sem horaSaida (entrada ímpar em aberto) -->
+                            <!-- Se o último registro está com saída em aberto (horaSaida == null), exibe "Registrar Saída" -->
                             <form th:if="${reg != null && reg.horaSaida == null}" th:action="@{/registros/saida}" method="post" style="display:inline;">
                                 <input type="hidden" name="registroId" th:value="${reg.id}" />
                                 <input type="hidden" name="pessoaId" th:value="${p.id}" />
@@ -189,6 +191,59 @@
         </div>
 
     </div>
+    <!-- Barra de Paginação Completa -->
+    <div class="paginacao-container" th:if="${totalPages > 0}">
+        <!-- 1. Seletor de Registros por Página -->
+        <div class="paginacao-tamanho">
+            <select id="size-select" onchange="mudarTamanhoPagina(this.value)" class="form-control-sm">
+                <option value="10" th:selected="${pageSize == 10}">10</option>
+                <option value="30" th:selected="${pageSize == 30}">30</option>
+                <option value="50" th:selected="${pageSize == 50}">50</option>
+                <option value="100" th:selected="${pageSize == 100}">100</option>
+            </select>
+            <span>linhas / página</span>
+        </div>
+
+        <!-- 2. Contador de Registros -->
+        <div class="paginacao-info">
+            Exibindo <span th:text="${startElement}">1</span> a <span th:text="${endElement}">30</span> de <span th:text="${totalElements}">3266</span> linhas
+        </div>
+
+        <!-- 3. Botões de Navegação de Páginas -->
+        <ul class="paginacao-botoes">
+            <!-- Primeira Página e Anterior -->
+            <li th:classappend="${currentPage == 0} ? 'disabled'">
+                <a th:href="@{/pessoas(page=0, size=${pageSize}, termo=${termo})}">&laquo;</a>
+            </li>
+            <li th:classappend="${currentPage == 0} ? 'disabled'">
+                <a th:href="@{/pessoas(page=${currentPage - 1}, size=${pageSize}, termo=${termo})}">&lt;</a>
+            </li>
+
+            <!-- Páginas Numeradas -->
+            <li th:each="i : ${#numbers.sequence(0, totalPages - 1)}"
+                th:if="${i >= currentPage - 2 and i <= currentPage + 2}"
+                th:classappend="${i == currentPage} ? 'active'">
+                <a th:href="@{/pessoas(page=${i}, size=${pageSize}, termo=${termo})}" th:text="${i + 1}">1</a>
+            </li>
+
+            <!-- Próxima Página e Última Página -->
+            <li th:classappend="${currentPage + 1 >= totalPages} ? 'disabled'">
+                <a th:href="@{/pessoas(page=${currentPage + 1}, size=${pageSize}, termo=${termo})}">&gt;</a>
+            </li>
+            <li th:classappend="${currentPage + 1 >= totalPages} ? 'disabled'">
+                <a th:href="@{/pessoas(page=${totalPages - 1}, size=${pageSize}, termo=${termo})}">&raquo;</a>
+            </li>
+        </ul>
+    </div>
+
+    <script>
+        function mudarTamanhoPagina(novoTamanho) {
+            const urlParams = new URLSearchParams(window.location.search);
+            urlParams.set('size', novoTamanho);
+            urlParams.set('page', 0); // Volta para a primeira página
+            window.location.search = urlParams.toString();
+        }
+    </script>
 </main>
 
 <script>
@@ -197,39 +252,34 @@
     let timeoutBusca = null;
 
     if (buscaInput) {
+        // Preenche o campo de busca caso já exista um termo na URL
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('termo')) {
+            buscaInput.value = urlParams.get('termo');
+        }
+
         buscaInput.addEventListener('input', function() {
             clearTimeout(timeoutBusca);
             timeoutBusca = setTimeout(() => {
-                const termo = buscaInput.value;
-                fetch(`/pessoas/buscar?termo=${encodeURIComponent(termo)}`)
-                    .then(response => response.text())
-                    .then(html => {
-                        const parser = new DOMParser();
-                        const doc = parser.parseFromString(html, 'text/html');
-                        const novaTabela = doc.querySelector('#tabela-pessoas');
-                        if (novaTabela) {
-                            document.querySelector('#tabela-pessoas').innerHTML = novaTabela.innerHTML;
-                            reaplicarOrdenacaoSalva();
-                        }
-                    });
-            }, 300);
+                const termo = buscaInput.value.trim();
+                const params = new URLSearchParams(window.location.search);
+                if (termo) {
+                    params.set('termo', termo);
+                } else {
+                    params.delete('termo');
+                }
+                params.set('page', 0); // Reseta para a primeira página ao buscar
+                window.location.search = params.toString();
+            }, 500);
         });
     }
 
     if (btnLimpar) {
         btnLimpar.addEventListener('click', function() {
-            buscaInput.value = '';
-            fetch('/pessoas/buscar?termo=')
-                .then(response => response.text())
-                .then(html => {
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(html, 'text/html');
-                    const novaTabela = doc.querySelector('#tabela-pessoas');
-                    if (novaTabela) {
-                        document.querySelector('#tabela-pessoas').innerHTML = novaTabela.innerHTML;
-                        reaplicarOrdenacaoSalva();
-                    }
-                });
+            const params = new URLSearchParams(window.location.search);
+            params.delete('termo');
+            params.set('page', 0);
+            window.location.search = params.toString();
         });
     }
 
@@ -255,7 +305,6 @@
 
         if (linhas.length <= 1) return;
 
-        // Recupera ou inverte direção
         if (!alternarDirecao) {
             const direcaoSalva = sessionStorage.getItem('pessoas_ordem_direcao');
             if (direcaoSalva !== null) {
@@ -275,7 +324,6 @@
             return direcaoAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
         });
 
-        // Salva estado da ordenação no navegador
         sessionStorage.setItem('pessoas_ordem_coluna', colunaIndex);
         sessionStorage.setItem('pessoas_ordem_direcao', direcaoAsc ? 'asc' : 'desc');
 
@@ -293,7 +341,6 @@
         }
     }
 
-    // Ao carregar a página após registrar entrada/saída/remover, restaura a ordenação prévia
     document.addEventListener('DOMContentLoaded', function() {
         reaplicarOrdenacaoSalva();
     });
