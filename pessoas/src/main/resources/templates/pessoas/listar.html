@@ -58,22 +58,6 @@
             </div>
         </div>
 
-        <div class="ordenacao-responsiva">
-            <label for="ordenacao-pessoas">Ordenar por</label>
-            <select id="ordenacao-pessoas" aria-label="Ordenar pessoas por">
-                <option value="1">Nome</option>
-                <option value="0">Documento</option>
-                <option value="2">Telefone</option>
-                <option value="3">Unidade</option>
-                <option value="4">Setor</option>
-                <option value="5">Andar</option>
-                <option value="6">Paciente</option>
-                <option value="7">Hora de entrada</option>
-                <option value="8">Hora de saída</option>
-                <option value="10">Observação</option>
-            </select>
-        </div>
-
         <div class="tabela-responsiva tabela-pessoas-responsiva">
             <table id="tabela-pessoas" th:fragment="tabela">
                 <colgroup sec:authorize="hasAnyRole('SISTEMA', 'GERAL')">
@@ -109,17 +93,49 @@
                 </colgroup>
                 <thead>
                 <tr>
-                    <th><button type="button" class="btn-ordenar" onclick="ordenarTabela(0)">Documento ↕</button></th>
-                    <th><button type="button" class="btn-ordenar" onclick="ordenarTabela(1)">Nome ↕</button></th>
-                    <th><button type="button" class="btn-ordenar" onclick="ordenarTabela(2)">Telefone ↕</button></th>
-                    <th><button type="button" class="btn-ordenar" onclick="ordenarTabela(3)">Unidade ↕</button></th>
-                    <th><button type="button" class="btn-ordenar" onclick="ordenarTabela(4)">Setor ↕</button></th>
-                    <th><button type="button" class="btn-ordenar" onclick="ordenarTabela(5)">Andar ↕</button></th>
-                    <th><button type="button" class="btn-ordenar" onclick="ordenarTabela(6)">Paciente ↕</button></th>
-                    <th><button type="button" class="btn-ordenar" onclick="ordenarTabela(7)">Hora Entrada ↕</button></th>
-                    <th><button type="button" class="btn-ordenar" onclick="ordenarTabela(8)">Hora Saída ↕</button></th>
-                    <th style="text-align: center; color: white; font-weight: 600; padding: 10px 8px;">Ação</th>
-                    <th><button type="button" class="btn-ordenar" onclick="ordenarTabela(10)">Observação ↕</button></th>
+                    <th>
+                        <a th:href="@{/pessoas(page=0, size=${pageSize}, termo=${termo}, sort='cpf', direction=${sortField == 'cpf' and sortDir == 'asc' ? 'desc' : 'asc'})}" class="btn-ordenar">
+                            Documento <span th:text="${sortField == 'cpf' ? (sortDir == 'asc' ? '▲' : '▼') : '↕'}">↕</span>
+                        </a>
+                    </th>
+                    <th>
+                        <a th:href="@{/pessoas(page=0, size=${pageSize}, termo=${termo}, sort='nome', direction=${sortField == 'nome' and sortDir == 'asc' ? 'desc' : 'asc'})}" class="btn-ordenar">
+                            Nome <span th:text="${sortField == 'nome' ? (sortDir == 'asc' ? '▲' : '▼') : '↕'}">↕</span>
+                        </a>
+                    </th>
+                    <th>
+                        <a th:href="@{/pessoas(page=0, size=${pageSize}, termo=${termo}, sort='telefone', direction=${sortField == 'telefone' and sortDir == 'asc' ? 'desc' : 'asc'})}" class="btn-ordenar">
+                            Telefone <span th:text="${sortField == 'telefone' ? (sortDir == 'asc' ? '▲' : '▼') : '↕'}">↕</span>
+                        </a>
+                    </th>
+                    <th>
+                        <a th:href="@{/pessoas(page=0, size=${pageSize}, termo=${termo}, sort='unidade', direction=${sortField == 'unidade' and sortDir == 'asc' ? 'desc' : 'asc'})}" class="btn-ordenar">
+                            Unidade <span th:text="${sortField == 'unidade' ? (sortDir == 'asc' ? '▲' : '▼') : '↕'}">↕</span>
+                        </a>
+                    </th>
+                    <th>
+                        <a th:href="@{/pessoas(page=0, size=${pageSize}, termo=${termo}, sort='setor', direction=${sortField == 'setor' and sortDir == 'asc' ? 'desc' : 'asc'})}" class="btn-ordenar">
+                            Setor <span th:text="${sortField == 'setor' ? (sortDir == 'asc' ? '▲' : '▼') : '↕'}">↕</span>
+                        </a>
+                    </th>
+                    <th>
+                        <a th:href="@{/pessoas(page=0, size=${pageSize}, termo=${termo}, sort='andar', direction=${sortField == 'andar' and sortDir == 'asc' ? 'desc' : 'asc'})}" class="btn-ordenar">
+                            Andar <span th:text="${sortField == 'andar' ? (sortDir == 'asc' ? '▲' : '▼') : '↕'}">↕</span>
+                        </a>
+                    </th>
+                    <th>
+                        <a th:href="@{/pessoas(page=0, size=${pageSize}, termo=${termo}, sort='paciente', direction=${sortField == 'paciente' and sortDir == 'asc' ? 'desc' : 'asc'})}" class="btn-ordenar">
+                            Paciente <span th:text="${sortField == 'paciente' ? (sortDir == 'asc' ? '▲' : '▼') : '↕'}">↕</span>
+                        </a>
+                    </th>
+                    <th style="color: white; font-weight: 600; text-align: center; padding: 10px 8px;">Hora Entrada</th>
+                    <th style="color: white; font-weight: 600; text-align: center; padding: 10px 8px;">Hora Saída</th>
+                    <th style="color: white; font-weight: 600; text-align: center; padding: 10px 8px;">Ação</th>
+                    <th>
+                        <a th:href="@{/pessoas(page=0, size=${pageSize}, termo=${termo}, sort='observacao', direction=${sortField == 'observacao' and sortDir == 'asc' ? 'desc' : 'asc'})}" class="btn-ordenar">
+                            Observação <span th:text="${sortField == 'observacao' ? (sortDir == 'asc' ? '▲' : '▼') : '↕'}">↕</span>
+                        </a>
+                    </th>
                     <th style="text-align: center; color: white; font-weight: 600; padding: 10px 8px;">Histórico</th>
                     <th style="text-align: center; color: white; font-weight: 600; padding: 10px 8px;">Editar</th>
                     <th class="th-remover" style="text-align: center; color: white; font-weight: 600; padding: 10px 8px;" sec:authorize="hasAnyRole('SISTEMA', 'GERAL')">Remover</th>
@@ -137,23 +153,18 @@
 
                     <!-- Exibição do Último Registro -->
                     <th:block th:with="reg=${ultimosRegistros != null ? ultimosRegistros.get(p.id) : null}">
-                        <!-- Hora Entrada: exibe se houver qualquer registro prévio -->
                         <td class="td-nowrap" data-label="Hora de entrada"
                             th:text="${reg != null ? #temporals.format(reg.horaEntrada, 'dd/MM/yyyy HH:mm') : '-'}"></td>
 
-                        <!-- Hora Saída: exibe a data/hora de saída se finalizado, ou '-' se estiver em aberto ou sem registro -->
                         <td class="td-nowrap" data-label="Hora de saída"
                             th:text="${reg != null && reg.horaSaida != null ? #temporals.format(reg.horaSaida, 'dd/MM/yyyy HH:mm') : '-'}"></td>
 
-                        <!-- Botão de Ação -->
                         <td data-label="Ação" style="text-align: center;">
-                            <!-- Se NÃO tem registro OU se a última visita já teve saída (visita finalizada), exibe "Registrar Entrada" -->
                             <form th:if="${reg == null || reg.horaSaida != null}" th:action="@{/registros/entrada}" method="post" style="display:inline;">
                                 <input type="hidden" name="pessoaId" th:value="${p.id}" />
                                 <button type="submit" class="btn-acao btn-entrada">Registrar Entrada</button>
                             </form>
 
-                            <!-- Se o último registro está com saída em aberto (horaSaida == null), exibe "Registrar Saída" -->
                             <form th:if="${reg != null && reg.horaSaida == null}" th:action="@{/registros/saida}" method="post" style="display:inline;">
                                 <input type="hidden" name="registroId" th:value="${reg.id}" />
                                 <input type="hidden" name="pessoaId" th:value="${p.id}" />
@@ -191,9 +202,9 @@
         </div>
 
     </div>
+
     <!-- Barra de Paginação Completa -->
     <div class="paginacao-container" th:if="${totalPages > 0}">
-        <!-- 1. Seletor de Registros por Página -->
         <div class="paginacao-tamanho">
             <select id="size-select" onchange="mudarTamanhoPagina(this.value)" class="form-control-sm">
                 <option value="10" th:selected="${pageSize == 10}">10</option>
@@ -204,34 +215,29 @@
             <span>linhas / página</span>
         </div>
 
-        <!-- 2. Contador de Registros -->
         <div class="paginacao-info">
             Exibindo <span th:text="${startElement}">1</span> a <span th:text="${endElement}">30</span> de <span th:text="${totalElements}">3266</span> linhas
         </div>
 
-        <!-- 3. Botões de Navegação de Páginas -->
         <ul class="paginacao-botoes">
-            <!-- Primeira Página e Anterior -->
             <li th:classappend="${currentPage == 0} ? 'disabled'">
-                <a th:href="@{/pessoas(page=0, size=${pageSize}, termo=${termo})}">&laquo;</a>
+                <a th:href="@{/pessoas(page=0, size=${pageSize}, termo=${termo}, sort=${sortField}, direction=${sortDir})}">&laquo;</a>
             </li>
             <li th:classappend="${currentPage == 0} ? 'disabled'">
-                <a th:href="@{/pessoas(page=${currentPage - 1}, size=${pageSize}, termo=${termo})}">&lt;</a>
+                <a th:href="@{/pessoas(page=${currentPage - 1}, size=${pageSize}, termo=${termo}, sort=${sortField}, direction=${sortDir})}">&lt;</a>
             </li>
 
-            <!-- Páginas Numeradas -->
             <li th:each="i : ${#numbers.sequence(0, totalPages - 1)}"
                 th:if="${i >= currentPage - 2 and i <= currentPage + 2}"
                 th:classappend="${i == currentPage} ? 'active'">
-                <a th:href="@{/pessoas(page=${i}, size=${pageSize}, termo=${termo})}" th:text="${i + 1}">1</a>
+                <a th:href="@{/pessoas(page=${i}, size=${pageSize}, termo=${termo}, sort=${sortField}, direction=${sortDir})}" th:text="${i + 1}">1</a>
             </li>
 
-            <!-- Próxima Página e Última Página -->
             <li th:classappend="${currentPage + 1 >= totalPages} ? 'disabled'">
-                <a th:href="@{/pessoas(page=${currentPage + 1}, size=${pageSize}, termo=${termo})}">&gt;</a>
+                <a th:href="@{/pessoas(page=${currentPage + 1}, size=${pageSize}, termo=${termo}, sort=${sortField}, direction=${sortDir})}">&gt;</a>
             </li>
             <li th:classappend="${currentPage + 1 >= totalPages} ? 'disabled'">
-                <a th:href="@{/pessoas(page=${totalPages - 1}, size=${pageSize}, termo=${termo})}">&raquo;</a>
+                <a th:href="@{/pessoas(page=${totalPages - 1}, size=${pageSize}, termo=${termo}, sort=${sortField}, direction=${sortDir})}">&raquo;</a>
             </li>
         </ul>
     </div>
@@ -240,7 +246,7 @@
         function mudarTamanhoPagina(novoTamanho) {
             const urlParams = new URLSearchParams(window.location.search);
             urlParams.set('size', novoTamanho);
-            urlParams.set('page', 0); // Volta para a primeira página
+            urlParams.set('page', 0);
             window.location.search = urlParams.toString();
         }
     </script>
@@ -252,7 +258,6 @@
     let timeoutBusca = null;
 
     if (buscaInput) {
-        // Preenche o campo de busca caso já exista um termo na URL
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.has('termo')) {
             buscaInput.value = urlParams.get('termo');
@@ -268,7 +273,7 @@
                 } else {
                     params.delete('termo');
                 }
-                params.set('page', 0); // Reseta para a primeira página ao buscar
+                params.set('page', 0);
                 window.location.search = params.toString();
             }, 500);
         });
@@ -287,63 +292,6 @@
         const obs = elemento.getAttribute('data-obs');
         alert("Observação completa:\n\n" + obs);
     }
-
-    const ordenacaoPessoas = document.getElementById('ordenacao-pessoas');
-    if (ordenacaoPessoas) {
-        ordenacaoPessoas.addEventListener('change', function () {
-            ordenarTabela(Number(this.value), true);
-        });
-    }
-
-    let direcaoAsc = true;
-
-    function ordenarTabela(colunaIndex, alternarDirecao = true) {
-        const table = document.getElementById("tabela-pessoas");
-        if (!table) return;
-        const tbody = table.querySelector("tbody");
-        const linhas = Array.from(tbody.querySelectorAll("tr:not(.linha-vazia)"));
-
-        if (linhas.length <= 1) return;
-
-        if (!alternarDirecao) {
-            const direcaoSalva = sessionStorage.getItem('pessoas_ordem_direcao');
-            if (direcaoSalva !== null) {
-                direcaoAsc = (direcaoSalva === 'asc');
-            }
-        }
-
-        linhas.sort((a, b) => {
-            const tdA = a.children[colunaIndex];
-            const tdB = b.children[colunaIndex];
-
-            if (!tdA || !tdB) return 0;
-
-            const valA = tdA.innerText.trim().toLowerCase();
-            const valB = tdB.innerText.trim().toLowerCase();
-
-            return direcaoAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
-        });
-
-        sessionStorage.setItem('pessoas_ordem_coluna', colunaIndex);
-        sessionStorage.setItem('pessoas_ordem_direcao', direcaoAsc ? 'asc' : 'desc');
-
-        if (alternarDirecao) {
-            direcaoAsc = !direcaoAsc;
-        }
-
-        linhas.forEach(linha => tbody.appendChild(linha));
-    }
-
-    function reaplicarOrdenacaoSalva() {
-        const colunaSalva = sessionStorage.getItem('pessoas_ordem_coluna');
-        if (colunaSalva !== null) {
-            ordenarTabela(Number(colunaSalva), false);
-        }
-    }
-
-    document.addEventListener('DOMContentLoaded', function() {
-        reaplicarOrdenacaoSalva();
-    });
 </script>
 </body>
 </html>

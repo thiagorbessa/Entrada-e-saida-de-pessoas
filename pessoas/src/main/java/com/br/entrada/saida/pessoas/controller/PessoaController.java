@@ -12,6 +12,7 @@ import com.br.entrada.saida.pessoas.service.RegistroService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -59,18 +60,24 @@ public class PessoaController {
 		model.addAttribute("usuarioLogado", usuarioLogado);
 	}
 
-	// Em @GetMapping (/pessoas)
 	@GetMapping
 	public String listar(
 			@RequestParam(value = "termo", required = false) String termo,
-			@PageableDefault(page = 0, size = 30, sort = "nome", direction = Sort.Direction.ASC) Pageable pageable,
+			@RequestParam(value = "sort", defaultValue = "nome") String sort,
+			@RequestParam(value = "direction", defaultValue = "asc") String direction,
+			@PageableDefault(page = 0, size = 30) Pageable pageable,
 			Model model,
 			Principal principal) {
 
 		Usuario usuario = obterUsuarioLogado(principal);
-		Page<Pessoa> paginaPessoas = pessoaService.buscarPorTermoEUsuarioPaginado(termo, usuario, pageable);
 
-		// Mapeia o ÚLTIMO REGISTRO de cada pessoa (seja em aberto ou finalizado)
+		// Ordenação dinâmica via Spring Data JPA
+		Sort ordenacao = direction.equalsIgnoreCase("asc") ? Sort.by(sort).ascending() : Sort.by(sort).descending();
+		Pageable pageableComOrdenacao = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), ordenacao);
+
+		Page<Pessoa> paginaPessoas = pessoaService.buscarPorTermoEUsuarioPaginado(termo, usuario, pageableComOrdenacao);
+
+		// Mapeia o ÚLTIMO REGISTRO de cada pessoa
 		Map<UUID, Registro> ultimosRegistros = new HashMap<>();
 		for (Pessoa p : paginaPessoas.getContent()) {
 			Registro ultimo = registroService.buscarUltimoRegistroDaPessoa(p.getId());
@@ -79,34 +86,41 @@ public class PessoaController {
 			}
 		}
 
-		int startElement = paginaPessoas.getTotalElements() == 0 ? 0 : (pageable.getPageNumber() * pageable.getPageSize()) + 1;
-		long endElement = Math.min((long) (pageable.getPageNumber() + 1) * pageable.getPageSize(), paginaPessoas.getTotalElements());
+		int startElement = paginaPessoas.getTotalElements() == 0 ? 0 : (pageableComOrdenacao.getPageNumber() * pageableComOrdenacao.getPageSize()) + 1;
+		long endElement = Math.min((long) (pageableComOrdenacao.getPageNumber() + 1) * pageableComOrdenacao.getPageSize(), paginaPessoas.getTotalElements());
 
 		model.addAttribute("paginaPessoas", paginaPessoas);
 		model.addAttribute("pessoas", paginaPessoas.getContent());
 		model.addAttribute("ultimosRegistros", ultimosRegistros);
-		model.addAttribute("currentPage", pageable.getPageNumber());
-		model.addAttribute("pageSize", pageable.getPageSize());
+		model.addAttribute("currentPage", pageableComOrdenacao.getPageNumber());
+		model.addAttribute("pageSize", pageableComOrdenacao.getPageSize());
 		model.addAttribute("totalPages", paginaPessoas.getTotalPages());
 		model.addAttribute("totalElements", paginaPessoas.getTotalElements());
 		model.addAttribute("startElement", startElement);
 		model.addAttribute("endElement", endElement);
 		model.addAttribute("termo", termo);
+		model.addAttribute("sortField", sort);
+		model.addAttribute("sortDir", direction);
 		model.addAttribute("usuarioLogado", usuario);
 
 		return "pessoas/listar";
 	}
 
-	// Em @GetMapping("/buscar")
 	@GetMapping("/buscar")
 	public String buscarParcial(
 			@RequestParam(value = "termo", required = false) String termo,
-			@PageableDefault(page = 0, size = 30, sort = "nome", direction = Sort.Direction.ASC) Pageable pageable,
+			@RequestParam(value = "sort", defaultValue = "nome") String sort,
+			@RequestParam(value = "direction", defaultValue = "asc") String direction,
+			@PageableDefault(page = 0, size = 30) Pageable pageable,
 			Model model,
 			Principal principal) {
 
 		Usuario usuario = obterUsuarioLogado(principal);
-		Page<Pessoa> paginaPessoas = pessoaService.buscarPorTermoEUsuarioPaginado(termo, usuario, pageable);
+
+		Sort ordenacao = direction.equalsIgnoreCase("asc") ? Sort.by(sort).ascending() : Sort.by(sort).descending();
+		Pageable pageableComOrdenacao = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), ordenacao);
+
+		Page<Pessoa> paginaPessoas = pessoaService.buscarPorTermoEUsuarioPaginado(termo, usuario, pageableComOrdenacao);
 
 		Map<UUID, Registro> ultimosRegistros = new HashMap<>();
 		for (Pessoa p : paginaPessoas.getContent()) {
@@ -119,6 +133,8 @@ public class PessoaController {
 		model.addAttribute("paginaPessoas", paginaPessoas);
 		model.addAttribute("pessoas", paginaPessoas.getContent());
 		model.addAttribute("ultimosRegistros", ultimosRegistros);
+		model.addAttribute("sortField", sort);
+		model.addAttribute("sortDir", direction);
 
 		return "pessoas/listar :: tabela";
 	}
