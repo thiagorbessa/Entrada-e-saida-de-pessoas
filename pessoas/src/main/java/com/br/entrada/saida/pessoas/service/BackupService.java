@@ -9,7 +9,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.multipart.MultipartFile;
-
+import java.util.regex.Pattern;
+import org.springframework.core.io.ByteArrayResource;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -34,6 +35,18 @@ public class BackupService {
 
     private final JdbcTemplate jdbcTemplate;
     private final PlatformTransactionManager transactionManager;
+
+    /** Dumps feitos com --all-databases / --databases (trazem CREATE DATABASE) nunca devem rodar por aqui. */
+    private static final Pattern DUMP_DE_SERVIDOR = Pattern.compile(
+            "^\\s*(CREATE\\s+DATABASE|DROP\\s+DATABASE|--\\s*Current Database:)", Pattern.CASE_INSENSITIVE);
+
+    /**
+     * Comandos que mexem nas tabelas de log (log_auditoria, logs_AAAA). A importação NUNCA as toca:
+     * o log atual é preservado. Cobre também o DROP TABLE IF EXISTS, que antes passava.
+     */
+    private static final Pattern COMANDO_DE_TABELA_DE_LOG = Pattern.compile(
+            "^(/\\*!\\d+\\s+)?(DROP TABLE|CREATE TABLE|LOCK TABLES|ALTER TABLE|INSERT INTO)\\s+"
+                    + "(IF NOT EXISTS\\s+|IF EXISTS\\s+)?`?LOG", Pattern.CASE_INSENSITIVE);
 
     public ResultadoArquivamento arquivarAno(int ano, boolean apagar) {
         if (ano < 2000 || ano > 2100) {
@@ -133,6 +146,7 @@ public class BackupService {
                 .collect(Collectors.joining(", "));
     }
 
+
     public void importarSql(MultipartFile arquivo) throws IOException {
         if (arquivo == null || arquivo.isEmpty()) {
             throw new IllegalArgumentException("Nenhum arquivo enviado.");
@@ -145,38 +159,55 @@ public class BackupService {
         try (InputStream in = arquivo.getInputStream();
              java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(in, StandardCharsets.UTF_8))) {
 
+            // Fase 1: só LÊ e valida o arquivo. Nada é executado no banco até terminar sem erro.
             StringBuilder sqlLimpo = new StringBuilder();
             String linha;
             boolean ignorarBloco = false;
 
             while ((linha = reader.readLine()) != null) {
-                String linhaUpper = linha.toUpperCase();
+                String t = linha.trim();
 
-                if (linhaUpper.contains("TABLE `LOG") || linhaUpper.contains("TABLE LOG") ||
-                        linhaUpper.contains("LOCK TABLES `LOG") || linhaUpper.contains("LOCK TABLES LOG") ||
-                        linhaUpper.contains("INSERT INTO `LOG") || linhaUpper.contains("INSERT INTO LOG")) {
-                    ignorarBloco = true;
+                if (DUMP_DE_SERVIDOR.matcher(t).find()) {
+                    throw new IllegalArgumentException("Este arquivo é um dump de servidor e não pode ser importado "
+                            + "por esta tela. Use o arquivo backup_<banco>_<data>.sql.");
                 }
 
+                // DELIMITER (triggers/rotinas/eventos) não é suportado pelo ScriptUtils. Recusa ANTES de executar
+                // qualquer comando, para não deixar o banco restaurado pela metade.
+                if (t.regionMatches(true, 0, "DELIMITER", 0, 9)) {
+                    throw new IllegalArgumentException("Este backup contém rotinas/triggers/eventos (DELIMITER), que "
+                            + "esta tela não consegue restaurar. Gere o backup com o backup-banco.bat/.sh atualizado "
+                            + "ou restaure por linha de comando. Nada foi alterado no banco.");
+                }
+
+                // Tabelas de log: o log atual é preservado, então todo comando sobre elas é descartado.
+                if (COMANDO_DE_TABELA_DE_LOG.matcher(t).find()) {
+                    ignorarBloco = true;
+                }
                 if (ignorarBloco) {
-                    if (linha.trim().endsWith(";")) {
+                    if (t.endsWith(";")) {
                         ignorarBloco = false;
                     }
                     continue;
                 }
 
-                if (linha.contains("_binary") || (linha.contains("binary(16)") && linha.contains("usuario_cpf"))) {
-                    continue;
+                // Dump antigo (sem --hex-blob): os ids BINARY(16) vêm como _binary '...' e podem quebrar o parser.
+                // Antes essas linhas eram descartadas em silêncio e as tabelas ficavam VAZIAS; agora recusamos.
+                if (t.regionMatches(true, 0, "INSERT INTO", 0, 11) && linha.contains("_binary")) {
+                    throw new IllegalArgumentException("Este backup foi gerado sem --hex-blob (ids em _binary) e "
+                            + "não pode ser importado com segurança. Gere um backup novo com o backup-banco.bat/.sh "
+                            + "atualizado e importe o novo arquivo. Nada foi alterado no banco.");
                 }
 
                 sqlLimpo.append(linha).append("\n");
             }
 
             EncodedResource script = new EncodedResource(
-                    new org.springframework.core.io.ByteArrayResource(sqlLimpo.toString().getBytes(StandardCharsets.UTF_8)),
+                    new ByteArrayResource(sqlLimpo.toString().getBytes(StandardCharsets.UTF_8)),
                     StandardCharsets.UTF_8
             );
 
+            // Fase 2: executa, tudo na MESMA conexão (FOREIGN_KEY_CHECKS é variável de sessão).
             jdbcTemplate.execute((ConnectionCallback<Void>) con -> {
                 try (Statement st = con.createStatement()) {
                     st.execute("SET FOREIGN_KEY_CHECKS=0");
@@ -190,7 +221,8 @@ public class BackupService {
                 } finally {
                     try (Statement st = con.createStatement()) {
                         st.execute("SET FOREIGN_KEY_CHECKS=1");
-                    } catch (SQLException ignored) {}
+                    } catch (SQLException ignored) {
+                    }
                 }
                 return null;
             });

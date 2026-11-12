@@ -1,51 +1,119 @@
-@echo off
-REM Backup fisico do banco MySQL que roda em container Docker (Windows).
-REM Gera um arquivo .sql que pode ser restaurado pela tela de backup do sistema
-REM ("Importar backup").
-REM
-REM Uso: de dois cliques ou rode backup-banco.bat
-REM Agendar: Agendador de Tarefas do Windows apontando para este arquivo.
-REM Obs.: se a senha tiver os caracteres % & ^ ! o .bat pode interpretar errado; prefira uma senha sem eles.
+#!/usr/bin/env bash
+# Backup fisico COMPLETO do MySQL que roda em container Docker.
+# Gera dois arquivos .sql em ./backups :
+#   1) backup_<banco>_<data>.sql            -> o banco da aplicacao (todas as tabelas, inclusive logs e
+#                                              tabelas anuais). Restaura pela tela "Importar backup".
+#   2) backup_servidor_completo_<data>.sql  -> o servidor inteiro (todos os bancos + usuarios/permissoes
+#                                              do MySQL). Para desastre; restaure por linha de comando:
+#        docker exec -i -e MYSQL_PWD=senha <container> mysql -u root < arquivo.sql
+#
+# Uso:    ./backup-banco.sh
+# Cron:   0 2 * * * /caminho/backup-banco.sh >> /caminho/backups/backup.log 2>&1
+# Dica:   chmod +x backup-banco.sh && chmod 600 backup-banco.sh   (o arquivo contem a senha)
 
-setlocal
+set -u
+set -o pipefail
 
-REM ==================== CONFIGURACAO (edite) ====================
-set "CONTAINER=mysql_db"
-set "DB_NAME=entrada_saida_pessoas"
-set "DB_USER=root"
-set "DB_PASS=root"
-set "DESTINO=%~dp0backups"
-set "DIAS_RETENCAO=30"
-REM DIAS_RETENCAO: apaga backups com mais de N dias; 0 = nunca apagar
-REM ===============================================================
+# ==================== CONFIGURACAO ====================
+CONTAINER="mysql_db"        # nome do container do MySQL (veja com: docker ps)
+DB_NAME="entrada_saida_pessoas"
+DB_USER="root"
+DB_PASS="root"
+DESTINO="$(cd "$(dirname "$0")" && pwd)/backups"
+DIAS_RETENCAO=30            # apaga backups com mais de N dias; 0 = nunca apagar
+SERVIDOR_COMPLETO=1         # 1 = gera tambem o dump de todos os bancos do servidor; 0 = so o da aplicacao
+# ======================================================
 
-if not exist "%DESTINO%" mkdir "%DESTINO%"
+# Banco da aplicacao: sem --routines/--events (geram DELIMITER, que a tela de importar nao entende).
+OPTS=(--single-transaction --no-tablespaces --default-character-set=utf8mb4 --hex-blob)
+TS="$(date +%Y-%m-%d_%H-%M-%S)"
+ARQ="$DESTINO/backup_${DB_NAME}_${TS}.sql"
+DESTINO2="$DESTINO/servidor-completo-NAO-IMPORTAR-PELA-TELA"
+ARQ2="$DESTINO2/backup_servidor_completo_${TS}.sql"
 
-for /f %%i in ('powershell -NoProfile -Command "Get-Date -Format yyyy-MM-dd_HH-mm-ss"') do set "TS=%%i"
-set "ARQ=%DESTINO%\backup_%DB_NAME%_%TS%.sql"
+mkdir -p "$DESTINO"
+[ "$SERVIDOR_COMPLETO" = "1" ] && mkdir -p "$DESTINO2"
 
-echo Gerando backup em: %ARQ%
+# ---------- 1) Banco da aplicacao ----------
+echo "[$(date '+%F %T')] [1/2] Gerando backup do banco $DB_NAME em: $ARQ"
 
-REM A senha vai por variavel de ambiente (MYSQL_PWD) para nao aparecer na lista de processos.
-docker exec -e "MYSQL_PWD=%DB_PASS%" %CONTAINER% mysqldump -u %DB_USER% --single-transaction --no-tablespaces --default-character-set=utf8mb4 %DB_NAME% > "%ARQ%"
-if errorlevel 1 (
-    echo ERRO: mysqldump falhou.
-    del "%ARQ%" 2>nul
-    exit /b 1
-)
+# A senha vai por variavel de ambiente (MYSQL_PWD) para nao aparecer na lista de processos.
+if ! docker exec -e MYSQL_PWD="$DB_PASS" "$CONTAINER" \
+        mysqldump -u "$DB_USER" "${OPTS[@]}" "$DB_NAME" > "$ARQ"; then
+    echo "ERRO: mysqldump do banco falhou." >&2
+    rm -f "$ARQ"
+    exit 1
+fi
 
-REM O mysqldump termina com "-- Dump completed on ..."; se nao estiver no arquivo, ele esta truncado.
-findstr /C:"Dump completed" "%ARQ%" >nul
-if errorlevel 1 (
-    echo ERRO: o arquivo gerado parece incompleto.
-    del "%ARQ%" 2>nul
-    exit /b 1
-)
+# O mysqldump termina com "-- Dump completed on ..."; se nao estiver la, o arquivo esta truncado.
+if ! tail -n 1 "$ARQ" | grep -q "Dump completed"; then
+    echo "ERRO: o arquivo gerado parece incompleto." >&2
+    rm -f "$ARQ"
+    exit 1
+fi
 
-if not "%DIAS_RETENCAO%"=="0" (
-    forfiles /p "%DESTINO%" /m "backup_%DB_NAME%_*.sql" /d -%DIAS_RETENCAO% /c "cmd /c del @path" >nul 2>&1
-)
+# Conferencia: toda tabela do banco precisa ter um CREATE TABLE no arquivo.
+N_TAB="$(docker exec -e MYSQL_PWD="$DB_PASS" "$CONTAINER" mysql -u "$DB_USER" -N -B \
+        -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='${DB_NAME}'" 2>/dev/null || true)"
+N_DUMP="$(grep -c '^CREATE TABLE' "$ARQ" || true)"
+if [ -z "$N_TAB" ]; then
+    echo "AVISO: nao foi possivel contar as tabelas do banco para conferir o arquivo." >&2
+elif [ "$N_TAB" != "$N_DUMP" ]; then
+    echo "ERRO: o banco tem $N_TAB tabelas, mas o arquivo tem $N_DUMP. Backup descartado." >&2
+    rm -f "$ARQ"
+    exit 1
+fi
+echo "Conferido: $N_DUMP tabelas no arquivo."
 
-echo OK: backup concluido.
-endlocal
-exit /b 0
+# ---------- 2) Servidor completo ----------
+NOME2=""
+if [ "$SERVIDOR_COMPLETO" = "1" ]; then
+    echo "[$(date '+%F %T')] [2/2] Gerando backup de TODOS os bancos do servidor em: $ARQ2"
+    if ! docker exec -e MYSQL_PWD="$DB_PASS" "$CONTAINER" \
+            mysqldump -u "$DB_USER" "${OPTS[@]}" --routines --triggers --events --all-databases > "$ARQ2"; then
+        echo "AVISO: o dump do servidor completo falhou; o backup do banco da aplicacao foi mantido." >&2
+        rm -f "$ARQ2"
+    elif ! tail -n 1 "$ARQ2" | grep -q "Dump completed"; then
+        echo "AVISO: o dump do servidor completo parece incompleto e foi descartado." >&2
+        rm -f "$ARQ2"
+    else
+        NOME2="$(basename "$ARQ2")"
+    fi
+fi
+
+# ---------- Retencao ----------
+if [ "$DIAS_RETENCAO" -gt 0 ]; then
+    find "$DESTINO" -name "backup_${DB_NAME}_*.sql" -mtime +"$DIAS_RETENCAO" -delete
+    [ -d "$DESTINO2" ] && find "$DESTINO2" -name "backup_servidor_completo_*.sql" -mtime +"$DIAS_RETENCAO" -delete
+fi
+
+TAMANHO="$(du -h "$ARQ" | cut -f1)"
+NOME="$(basename "$ARQ")"
+DET="Backup fisico gerado: $NOME - $TAMANHO - $N_DUMP tabelas."
+[ -n "$NOME2" ] && DET="$DET Servidor completo: $NOME2."
+
+# ---- Registra o backup na tela "Logs de Auditoria" do sistema ----
+# Descobre sozinho a tabela de logs (a que tem a coluna usuario_cpf e nao termina em _AAAA).
+# Falha aqui NAO invalida o backup: apenas avisa.
+if ! {
+    printf "SET @det := '%s';\n" "$DET"
+    cat <<'SQL'
+SET NAMES utf8mb4;
+SET @tab := (SELECT table_name FROM information_schema.columns
+             WHERE table_schema = DATABASE() AND column_name = 'usuario_cpf'
+               AND table_name NOT REGEXP '_[0-9]{4}$' LIMIT 1);
+SET @idt := (SELECT data_type FROM information_schema.columns
+             WHERE table_schema = DATABASE() AND table_name = @tab AND column_name = 'id' LIMIT 1);
+SET @sql := CONCAT('INSERT INTO ', @tab,
+  ' (id, data_hora, usuario_cpf, usuario_nome, acao, entidade, entidade_descricao, detalhes) VALUES (',
+  IF(@idt IN ('binary','varbinary'), 'UUID_TO_BIN(UUID())', 'UUID()'),
+  ', NOW(), ''-'', ''Rotina de backup'', ''BACKUP_FISICO'', ''BACKUP'', ''Backup fisico do banco (.sql)'', ?)');
+PREPARE st FROM @sql;
+EXECUTE st USING @det;
+DEALLOCATE PREPARE st;
+SQL
+} | docker exec -i -e MYSQL_PWD="$DB_PASS" "$CONTAINER" mysql -u "$DB_USER" --default-character-set=utf8mb4 "$DB_NAME"; then
+    echo "AVISO: backup OK, mas nao foi possivel registrar o log de auditoria." >&2
+fi
+
+echo "[$(date '+%F %T')] OK: backup concluido ($TAMANHO)."

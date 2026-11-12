@@ -128,8 +128,16 @@
                             Paciente <span th:text="${sortField == 'paciente' ? (sortDir == 'asc' ? '▲' : '▼') : '↕'}">↕</span>
                         </a>
                     </th>
-                    <th style="color: white; font-weight: 600; text-align: center; padding: 10px 8px;">Hora Entrada</th>
-                    <th style="color: white; font-weight: 600; text-align: center; padding: 10px 8px;">Hora Saída</th>
+                    <th>
+                        <a th:href="@{/pessoas(page=0, size=${pageSize}, termo=${termo}, sort='horaEntrada', direction=${sortField == 'horaEntrada' and sortDir == 'asc' ? 'desc' : 'asc'})}" class="btn-ordenar">
+                            Hora Entrada <span th:text="${sortField == 'horaEntrada' ? (sortDir == 'asc' ? '▲' : '▼') : '↕'}">↕</span>
+                        </a>
+                    </th>
+                    <th>
+                        <a th:href="@{/pessoas(page=0, size=${pageSize}, termo=${termo}, sort='horaSaida', direction=${sortField == 'horaSaida' and sortDir == 'asc' ? 'desc' : 'asc'})}" class="btn-ordenar">
+                            Hora Saída <span th:text="${sortField == 'horaSaida' ? (sortDir == 'asc' ? '▲' : '▼') : '↕'}">↕</span>
+                        </a>
+                    </th>
                     <th style="color: white; font-weight: 600; text-align: center; padding: 10px 8px;">Ação</th>
                     <th>
                         <a th:href="@{/pessoas(page=0, size=${pageSize}, termo=${termo}, sort='observacao', direction=${sortField == 'observacao' and sortDir == 'asc' ? 'desc' : 'asc'})}" class="btn-ordenar">

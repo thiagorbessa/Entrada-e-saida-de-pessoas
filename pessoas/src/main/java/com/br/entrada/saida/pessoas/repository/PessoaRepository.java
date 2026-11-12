@@ -36,33 +36,54 @@ public interface PessoaRepository extends JpaRepository<Pessoa, UUID> {
     """)
     List<Pessoa> buscarPorTermoEUnidades(@Param("termo") String termo, @Param("unidades") Set<Unidade> unidades);
 
-    // Método original (mantido)
     List<Pessoa> findByUnidadeIn(Set<Unidade> unidades);
 
-    // Versão paginada exigida pelo PessoaService
     Page<Pessoa> findByUnidadeIn(Set<Unidade> unidades, Pageable pageable);
 
     // ==========================================================
-    // MÉTODOS PAGINADOS PARA A BARRA DE BUSCA
+    // MÉTODOS PAGINADOS COM SUPORTE À ORDENAÇÃO POR HORA DE ENTRADA E SAÍDA
     // ==========================================================
-    @Query("""
+    @Query(value = """
         SELECT p FROM Pessoa p
-        WHERE LOWER(p.nome) LIKE LOWER(CONCAT('%', :termo, '%'))
+        LEFT JOIN Registro r ON r.pessoa.id = p.id AND r.horaEntrada = (
+            SELECT MAX(r2.horaEntrada) FROM Registro r2 WHERE r2.pessoa.id = p.id
+        )
+        WHERE (:termo IS NULL OR :termo = ''
+           OR LOWER(p.nome) LIKE LOWER(CONCAT('%', :termo, '%'))
            OR LOWER(p.cpf) LIKE LOWER(CONCAT('%', :termo, '%'))
            OR LOWER(p.identidade) LIKE LOWER(CONCAT('%', :termo, '%'))
-           OR LOWER(p.telefone) LIKE LOWER(CONCAT('%', :termo, '%'))
+           OR LOWER(p.telefone) LIKE LOWER(CONCAT('%', :termo, '%')))
+    """,
+            countQuery = """
+        SELECT COUNT(p) FROM Pessoa p
+        WHERE (:termo IS NULL OR :termo = ''
+           OR LOWER(p.nome) LIKE LOWER(CONCAT('%', :termo, '%'))
+           OR LOWER(p.cpf) LIKE LOWER(CONCAT('%', :termo, '%'))
+           OR LOWER(p.identidade) LIKE LOWER(CONCAT('%', :termo, '%'))
+           OR LOWER(p.telefone) LIKE LOWER(CONCAT('%', :termo, '%')))
     """)
     Page<Pessoa> buscarPorTermoPaginado(@Param("termo") String termo, Pageable pageable);
 
-    @Query("""
+    @Query(value = """
         SELECT p FROM Pessoa p
+        LEFT JOIN Registro r ON r.pessoa.id = p.id AND r.horaEntrada = (
+            SELECT MAX(r2.horaEntrada) FROM Registro r2 WHERE r2.pessoa.id = p.id
+        )
         WHERE p.unidade IN :unidades
-          AND (
-               LOWER(p.nome) LIKE LOWER(CONCAT('%', :termo, '%'))
+          AND (:termo IS NULL OR :termo = ''
+            OR LOWER(p.nome) LIKE LOWER(CONCAT('%', :termo, '%'))
             OR LOWER(p.cpf) LIKE LOWER(CONCAT('%', :termo, '%'))
             OR LOWER(p.identidade) LIKE LOWER(CONCAT('%', :termo, '%'))
-            OR LOWER(p.telefone) LIKE LOWER(CONCAT('%', :termo, '%'))
-          )
+            OR LOWER(p.telefone) LIKE LOWER(CONCAT('%', :termo, '%')))
+    """,
+            countQuery = """
+        SELECT COUNT(p) FROM Pessoa p
+        WHERE p.unidade IN :unidades
+          AND (:termo IS NULL OR :termo = ''
+            OR LOWER(p.nome) LIKE LOWER(CONCAT('%', :termo, '%'))
+            OR LOWER(p.cpf) LIKE LOWER(CONCAT('%', :termo, '%'))
+            OR LOWER(p.identidade) LIKE LOWER(CONCAT('%', :termo, '%'))
+            OR LOWER(p.telefone) LIKE LOWER(CONCAT('%', :termo, '%')))
     """)
     Page<Pessoa> buscarPorTermoEUnidadesPaginado(@Param("termo") String termo, @Param("unidades") Set<Unidade> unidades, Pageable pageable);
 

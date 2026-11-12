@@ -15,6 +15,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.JpaSort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -60,24 +61,33 @@ public class PessoaController {
 		model.addAttribute("usuarioLogado", usuarioLogado);
 	}
 
+	private Pageable ajustarPageableComOrdenacao(Pageable pageable, String sort, String direction) {
+		Sort.Direction dir = direction.equalsIgnoreCase("asc") ? Sort.Direction.ASC : Sort.Direction.DESC;
+
+		if ("horaEntrada".equals(sort) || "horaSaida".equals(sort)) {
+			// Ignoramos completamente o prefixo de propriedade
+			// O uso do JpaSort avisa ao Spring para não procurar as propriedades "horaEntrada/Saida" no objeto Pessoa
+			return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),
+					JpaSort.unsafe(dir, "(" + sort + ")"));
+		}
+
+		return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by(dir, sort));
+	}
+
 	@GetMapping
 	public String listar(
 			@RequestParam(value = "termo", required = false) String termo,
 			@RequestParam(value = "sort", defaultValue = "nome") String sort,
 			@RequestParam(value = "direction", defaultValue = "asc") String direction,
-			@PageableDefault(page = 0, size = 30) Pageable pageable,
+			@PageableDefault(page = 0, size = 10) Pageable pageable,
 			Model model,
 			Principal principal) {
 
 		Usuario usuario = obterUsuarioLogado(principal);
-
-		// Ordenação dinâmica via Spring Data JPA
-		Sort ordenacao = direction.equalsIgnoreCase("asc") ? Sort.by(sort).ascending() : Sort.by(sort).descending();
-		Pageable pageableComOrdenacao = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), ordenacao);
+		Pageable pageableComOrdenacao = ajustarPageableComOrdenacao(pageable, sort, direction);
 
 		Page<Pessoa> paginaPessoas = pessoaService.buscarPorTermoEUsuarioPaginado(termo, usuario, pageableComOrdenacao);
 
-		// Mapeia o ÚLTIMO REGISTRO de cada pessoa
 		Map<UUID, Registro> ultimosRegistros = new HashMap<>();
 		for (Pessoa p : paginaPessoas.getContent()) {
 			Registro ultimo = registroService.buscarUltimoRegistroDaPessoa(p.getId());
@@ -116,9 +126,7 @@ public class PessoaController {
 			Principal principal) {
 
 		Usuario usuario = obterUsuarioLogado(principal);
-
-		Sort ordenacao = direction.equalsIgnoreCase("asc") ? Sort.by(sort).ascending() : Sort.by(sort).descending();
-		Pageable pageableComOrdenacao = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), ordenacao);
+		Pageable pageableComOrdenacao = ajustarPageableComOrdenacao(pageable, sort, direction);
 
 		Page<Pessoa> paginaPessoas = pessoaService.buscarPorTermoEUsuarioPaginado(termo, usuario, pageableComOrdenacao);
 
