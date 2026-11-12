@@ -1,7 +1,11 @@
 package com.br.entrada.saida.pessoas.service;
 
+import com.br.entrada.saida.pessoas.exception.RegraNegocioException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.support.EncodedResource;
+import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.ConnectionCallback;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.init.ScriptUtils;
@@ -9,18 +13,21 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.multipart.MultipartFile;
-import java.util.regex.Pattern;
-import org.springframework.core.io.ByteArrayResource;
+
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class BackupService {
@@ -50,17 +57,23 @@ public class BackupService {
 
     public ResultadoArquivamento arquivarAno(int ano, boolean apagar) {
         if (ano < 2000 || ano > 2100) {
-            throw new IllegalArgumentException("Ano inválido: " + ano);
+            throw new RegraNegocioException("Ano inválido", "Informe um ano válido entre 2000 e 2100.");
         }
 
         String tReg = "registros_" + ano;
         String tPes = "pessoas_" + ano;
-        String tLog = "logs_" + ano; // Nome correto da tabela de backup de logs
+        String tLog = "logs_" + ano;
 
-        // DDL com os nomes corretos das tabelas do MySQL
-        jdbcTemplate.execute("CREATE TABLE IF NOT EXISTS " + tReg + " LIKE registros");
-        jdbcTemplate.execute("CREATE TABLE IF NOT EXISTS " + tPes + " LIKE pessoas");
-        jdbcTemplate.execute("CREATE TABLE IF NOT EXISTS " + tLog + " LIKE log_auditoria");
+        try {
+            // DDL com os nomes corretos das tabelas do MySQL
+            jdbcTemplate.execute("CREATE TABLE IF NOT EXISTS " + tReg + " LIKE registros");
+            jdbcTemplate.execute("CREATE TABLE IF NOT EXISTS " + tPes + " LIKE pessoas");
+            jdbcTemplate.execute("CREATE TABLE IF NOT EXISTS " + tLog + " LIKE log_auditoria");
+        } catch (DataAccessException e) {
+            log.error("Erro ao criar tabelas de backup para o ano {}", ano, e);
+            throw new RegraNegocioException("Falha na estrutura de backup",
+                    "Não foi possível preparar as tabelas de backup para o ano " + ano + ". Nada foi alterado.");
+        }
 
         List<String> colsReg = colunasComuns("registros", tReg);
         List<String> colsPes = colunasComuns("pessoas", tPes);
@@ -69,53 +82,72 @@ public class BackupService {
         Timestamp inicio = Timestamp.valueOf(LocalDateTime.of(ano, 1, 1, 0, 0));
         Timestamp fim = Timestamp.valueOf(LocalDateTime.of(ano + 1, 1, 1, 0, 0));
 
-        return new TransactionTemplate(transactionManager).execute(status -> {
+        try {
+            ResultadoArquivamento resultado = new TransactionTemplate(transactionManager).execute(status -> {
 
-            // 1) Registros fechados do ano
-            int registrosCopiados = jdbcTemplate.update(
-                    "INSERT INTO " + tReg + " (" + listar(colsReg, null) + ") " +
-                            "SELECT " + listar(colsReg, "r") + " FROM registros r " +
-                            "WHERE r.hora_saida IS NOT NULL " +
-                            "AND r.hora_entrada >= ? AND r.hora_entrada < ? " +
-                            "AND NOT EXISTS (SELECT 1 FROM " + tReg + " d WHERE d.id = r.id)",
-                    inicio, fim);
-
-            // 2) Pessoas
-            jdbcTemplate.update("DELETE d FROM " + tPes + " d JOIN pessoas p ON p.id = d.id");
-            int pessoasNoBackup = jdbcTemplate.update(
-                    "INSERT INTO " + tPes + " (" + listar(colsPes, null) + ") " +
-                            "SELECT " + listar(colsPes, null) + " FROM pessoas");
-
-            // 3) Logs de Auditoria (tabela real: log_auditoria)
-            int logsCopiados = jdbcTemplate.update(
-                    "INSERT INTO " + tLog + " (" + listar(colsLog, null) + ") " +
-                            "SELECT " + listar(colsLog, "l") + " FROM log_auditoria l " +
-                            "WHERE l.data_hora >= ? AND l.data_hora < ? " +
-                            "AND NOT EXISTS (SELECT 1 FROM " + tLog + " dl WHERE dl.id = l.id)",
-                    inicio, fim);
-
-            int registrosApagados = 0;
-            int pessoasApagadas = 0;
-
-            if (apagar) {
-                registrosApagados = jdbcTemplate.update(
-                        "DELETE r FROM registros r JOIN " + tReg + " d ON d.id = r.id " +
+                // 1) Registros fechados do ano
+                int registrosCopiados = jdbcTemplate.update(
+                        "INSERT INTO " + tReg + " (" + listar(colsReg, null) + ") " +
+                                "SELECT " + listar(colsReg, "r") + " FROM registros r " +
                                 "WHERE r.hora_saida IS NOT NULL " +
-                                "AND r.hora_entrada >= ? AND r.hora_entrada < ?",
+                                "AND r.hora_entrada >= ? AND r.hora_entrada < ? " +
+                                "AND NOT EXISTS (SELECT 1 FROM " + tReg + " d WHERE d.id = r.id)",
                         inicio, fim);
 
-                pessoasApagadas = jdbcTemplate.update(
-                        "DELETE p FROM pessoas p JOIN " + tPes + " dp ON dp.id = p.id " +
-                                "WHERE EXISTS (SELECT 1 FROM " + tReg + " dr WHERE dr.pessoa_id = p.id) " +
-                                "AND NOT EXISTS (SELECT 1 FROM registros r WHERE r.pessoa_id = p.id)");
+                // 2) Pessoas
+                jdbcTemplate.update("DELETE d FROM " + tPes + " d JOIN pessoas p ON p.id = d.id");
+                int pessoasNoBackup = jdbcTemplate.update(
+                        "INSERT INTO " + tPes + " (" + listar(colsPes, null) + ") " +
+                                "SELECT " + listar(colsPes, null) + " FROM pessoas");
+
+                // 3) Logs de Auditoria (tabela real: log_auditoria)
+                int logsCopiados = jdbcTemplate.update(
+                        "INSERT INTO " + tLog + " (" + listar(colsLog, null) + ") " +
+                                "SELECT " + listar(colsLog, "l") + " FROM log_auditoria l " +
+                                "WHERE l.data_hora >= ? AND l.data_hora < ? " +
+                                "AND NOT EXISTS (SELECT 1 FROM " + tLog + " dl WHERE dl.id = l.id)",
+                        inicio, fim);
+
+                int registrosApagados = 0;
+                int pessoasApagadas = 0;
+
+                if (apagar) {
+                    registrosApagados = jdbcTemplate.update(
+                            "DELETE r FROM registros r JOIN " + tReg + " d ON d.id = r.id " +
+                                    "WHERE r.hora_saida IS NOT NULL " +
+                                    "AND r.hora_entrada >= ? AND r.hora_entrada < ?",
+                            inicio, fim);
+
+                    pessoasApagadas = jdbcTemplate.update(
+                            "DELETE p FROM pessoas p JOIN " + tPes + " dp ON dp.id = p.id " +
+                                    "WHERE EXISTS (SELECT 1 FROM " + tReg + " dr WHERE dr.pessoa_id = p.id) " +
+                                    "AND NOT EXISTS (SELECT 1 FROM registros r WHERE r.pessoa_id = p.id)");
+                }
+
+                return new ResultadoArquivamento(ano, apagar, registrosCopiados, pessoasNoBackup,
+                        logsCopiados, registrosApagados, pessoasApagadas);
+            });
+
+            if (resultado == null) {
+                throw new RegraNegocioException("Falha no arquivamento",
+                        "Não foi possível concluir a transação de arquivamento para o ano " + ano + ".");
             }
 
-            return new ResultadoArquivamento(ano, apagar, registrosCopiados, pessoasNoBackup,
-                    logsCopiados, registrosApagados, pessoasApagadas);
-        });
+            return resultado;
+        } catch (RegraNegocioException e) {
+            throw e;
+        } catch (DataAccessException e) {
+            log.error("Erro transacional ao arquivar o ano {} (apagar={})", ano, apagar, e);
+            throw new RegraNegocioException("Falha ao arquivar",
+                    "Ocorreu um erro no banco de dados durante o arquivamento do ano " + ano + ". Nada foi apagado.");
+        }
     }
 
     public boolean verificarExistenciaBackup(int ano) {
+        if (ano < 2000 || ano > 2100) {
+            return false;
+        }
+
         String tReg = "registros_" + ano;
         String tPes = "pessoas_" + ano;
         String tLog = "logs_" + ano;
@@ -135,7 +167,8 @@ public class BackupService {
                         "ORDER BY o.ORDINAL_POSITION",
                 String.class, destino, origem);
         if (cols.isEmpty() || !cols.contains("id")) {
-            throw new IllegalStateException("Estrutura inesperada nas tabelas " + origem + " / " + destino);
+            throw new RegraNegocioException("Estrutura incompatível",
+                    "Estrutura inesperada nas tabelas " + origem + " / " + destino + ".");
         }
         return cols;
     }
@@ -146,21 +179,22 @@ public class BackupService {
                 .collect(Collectors.joining(", "));
     }
 
-
-    public void importarSql(MultipartFile arquivo) throws IOException {
+    public void importarSql(MultipartFile arquivo) {
         if (arquivo == null || arquivo.isEmpty()) {
-            throw new IllegalArgumentException("Nenhum arquivo enviado.");
+            throw new RegraNegocioException("Arquivo obrigatório", "Nenhum arquivo foi selecionado para importação.");
         }
+
         String nome = arquivo.getOriginalFilename();
         if (nome == null || !nome.toLowerCase().endsWith(".sql")) {
-            throw new IllegalArgumentException("O arquivo precisa ter a extensão .sql.");
+            throw new RegraNegocioException("Formato inválido", "O arquivo precisa ter a extensão .sql.");
         }
 
-        try (InputStream in = arquivo.getInputStream();
-             java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(in, StandardCharsets.UTF_8))) {
+        StringBuilder sqlLimpo = new StringBuilder();
 
-            // Fase 1: só LÊ e valida o arquivo. Nada é executado no banco até terminar sem erro.
-            StringBuilder sqlLimpo = new StringBuilder();
+        // Fase 1: só LÊ e valida o arquivo. Nada é executado no banco até terminar sem erro.
+        try (InputStream in = arquivo.getInputStream();
+             BufferedReader reader = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8))) {
+
             String linha;
             boolean ignorarBloco = false;
 
@@ -168,16 +202,16 @@ public class BackupService {
                 String t = linha.trim();
 
                 if (DUMP_DE_SERVIDOR.matcher(t).find()) {
-                    throw new IllegalArgumentException("Este arquivo é um dump de servidor e não pode ser importado "
-                            + "por esta tela. Use o arquivo backup_<banco>_<data>.sql.");
+                    throw new RegraNegocioException("Dump não suportado",
+                            "Este arquivo é um dump de servidor e não pode ser importado por esta tela. " +
+                                    "Use o arquivo backup_<banco>_<data>.sql. Nada foi alterado no banco.");
                 }
 
-                // DELIMITER (triggers/rotinas/eventos) não é suportado pelo ScriptUtils. Recusa ANTES de executar
-                // qualquer comando, para não deixar o banco restaurado pela metade.
+                // DELIMITER (triggers/rotinas/eventos) não é suportado pelo ScriptUtils.
                 if (t.regionMatches(true, 0, "DELIMITER", 0, 9)) {
-                    throw new IllegalArgumentException("Este backup contém rotinas/triggers/eventos (DELIMITER), que "
-                            + "esta tela não consegue restaurar. Gere o backup com o backup-banco.bat/.sh atualizado "
-                            + "ou restaure por linha de comando. Nada foi alterado no banco.");
+                    throw new RegraNegocioException("Backup incompatível",
+                            "Este backup contém rotinas/triggers/eventos (DELIMITER), que esta tela não consegue restaurar. " +
+                                    "Gere o backup com o backup-banco.bat/.sh atualizado ou restaure por linha de comando. Nada foi alterado no banco.");
                 }
 
                 // Tabelas de log: o log atual é preservado, então todo comando sobre elas é descartado.
@@ -192,22 +226,34 @@ public class BackupService {
                 }
 
                 // Dump antigo (sem --hex-blob): os ids BINARY(16) vêm como _binary '...' e podem quebrar o parser.
-                // Antes essas linhas eram descartadas em silêncio e as tabelas ficavam VAZIAS; agora recusamos.
                 if (t.regionMatches(true, 0, "INSERT INTO", 0, 11) && linha.contains("_binary")) {
-                    throw new IllegalArgumentException("Este backup foi gerado sem --hex-blob (ids em _binary) e "
-                            + "não pode ser importado com segurança. Gere um backup novo com o backup-banco.bat/.sh "
-                            + "atualizado e importe o novo arquivo. Nada foi alterado no banco.");
+                    throw new RegraNegocioException("Backup antigo incompatível",
+                            "Este backup foi gerado sem --hex-blob (ids em _binary) e não pode ser importado com segurança. " +
+                                    "Gere um backup novo com o backup-banco.bat/.sh atualizado e importe o novo arquivo. Nada foi alterado no banco.");
                 }
 
                 sqlLimpo.append(linha).append("\n");
             }
+        } catch (RegraNegocioException e) {
+            throw e;
+        } catch (IOException e) {
+            log.error("Erro de I/O ao ler o arquivo SQL '{}'", nome, e);
+            throw new RegraNegocioException("Erro de leitura",
+                    "Não foi possível ler o arquivo enviado. Verifique se ele não está corrompido. Nada foi alterado no banco.");
+        }
 
-            EncodedResource script = new EncodedResource(
-                    new ByteArrayResource(sqlLimpo.toString().getBytes(StandardCharsets.UTF_8)),
-                    StandardCharsets.UTF_8
-            );
+        if (sqlLimpo.toString().isBlank()) {
+            throw new RegraNegocioException("Arquivo SQL vazio",
+                    "O arquivo enviado não contém comandos SQL válidos para restauração. Nada foi alterado no banco.");
+        }
 
-            // Fase 2: executa, tudo na MESMA conexão (FOREIGN_KEY_CHECKS é variável de sessão).
+        EncodedResource script = new EncodedResource(
+                new ByteArrayResource(sqlLimpo.toString().getBytes(StandardCharsets.UTF_8)),
+                StandardCharsets.UTF_8
+        );
+
+        // Fase 2: executa tudo na MESMA conexão (FOREIGN_KEY_CHECKS é variável de sessão).
+        try {
             jdbcTemplate.execute((ConnectionCallback<Void>) con -> {
                 try (Statement st = con.createStatement()) {
                     st.execute("SET FOREIGN_KEY_CHECKS=0");
@@ -226,8 +272,11 @@ public class BackupService {
                 }
                 return null;
             });
-        } catch (Exception e) {
-            throw new IOException("Erro ao processar o arquivo de importação: " + e.getMessage(), e);
+        } catch (DataAccessException e) {
+            log.error("Erro ao executar script SQL de restauração a partir de '{}'", nome, e);
+            throw new RegraNegocioException("Falha na restauração",
+                    "Ocorreu um erro ao executar os comandos SQL no banco de dados. " +
+                            "O banco pode estar parcialmente restaurado; refaça a importação com um arquivo válido.");
         }
     }
 }

@@ -40,6 +40,16 @@
         <div class="titulo-secao">
             <h1>Gestão de Usuários do Sistema</h1>
         </div>
+        <div class="titulo-secao">
+            <h1>Gestão de Usuários do Sistema</h1>
+        </div>
+
+        <div th:if="${sucesso}" class="alert alert-sucesso">
+            <span th:text="${sucesso}"></span>
+        </div>
+        <div th:if="${erro}" class="alert alert-erro">
+            <span th:text="${erro}"></span>
+        </div>
 
         <div class="busca-container-usuarios">
             <input type="text" id="busca" class="form-control campo-busca"

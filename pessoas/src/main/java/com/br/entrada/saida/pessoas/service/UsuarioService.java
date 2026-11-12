@@ -1,7 +1,10 @@
 package com.br.entrada.saida.pessoas.service;
 
 import com.br.entrada.saida.pessoas.dto.UsuarioRequestDTO;
+import com.br.entrada.saida.pessoas.exception.AcessoNegadoException;
 import com.br.entrada.saida.pessoas.exception.CpfDuplicadoException;
+import com.br.entrada.saida.pessoas.exception.RecursoNaoEncontradoException;
+import com.br.entrada.saida.pessoas.exception.RegraNegocioException;
 import com.br.entrada.saida.pessoas.model.Usuario;
 import com.br.entrada.saida.pessoas.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
@@ -26,7 +29,7 @@ public class UsuarioService {
 
     public Usuario buscarPorId(Long id) {
         return usuarioRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Usuário não encontrado."));
     }
 
     @Transactional
@@ -49,7 +52,12 @@ public class UsuarioService {
             usuario = buscarPorId(dto.getId());
 
             // Pega o estado anterior para comparar o antes e depois
-            detalhesAuditoria = auditoriaService.compararEDetalharUsuario(usuario, dto.getNomeCompleto(), dto.getPerfil(), dto.getUnidades() != null ? List.copyOf(dto.getUnidades()) : List.of());
+            detalhesAuditoria = auditoriaService.compararEDetalharUsuario(
+                    usuario,
+                    dto.getNomeCompleto(),
+                    dto.getPerfil(),
+                    dto.getUnidades() != null ? List.copyOf(dto.getUnidades()) : List.of()
+            );
 
             usuario.setNomeCompleto(dto.getNomeCompleto());
             usuario.setCpf(cpfLimpo); // Salva limpo
@@ -69,7 +77,7 @@ public class UsuarioService {
             }
         } else {
             if (dto.getSenha() == null || dto.getSenha().trim().isEmpty()) {
-                throw new IllegalArgumentException("A senha é obrigatória para novos usuários.");
+                throw new RegraNegocioException("A senha é obrigatória para novos usuários.");
             }
 
             usuario = new Usuario();
@@ -101,7 +109,7 @@ public class UsuarioService {
 
         // Impede que o usuário delete a si mesmo
         if (usuarioLogado != null && usuarioLogado.getId().equals(usuario.getId())) {
-            throw new SecurityException("Você não pode excluir o seu próprio usuário.");
+            throw new AcessoNegadoException("Você não pode excluir o seu próprio usuário.");
         }
 
         UUID uuidLog = usuario.getId() != null ? UUID.nameUUIDFromBytes(usuario.getId().toString().getBytes()) : null;
@@ -114,12 +122,16 @@ public class UsuarioService {
 
     @Transactional
     public void alterarSenha(Usuario usuarioLogado, String senhaAntiga, String senhaNova) {
+        if (usuarioLogado == null) {
+            throw new AcessoNegadoException("Usuário não autenticado.");
+        }
+
         if (senhaAntiga == null || senhaAntiga.trim().isEmpty() || senhaNova == null || senhaNova.trim().isEmpty()) {
-            throw new IllegalArgumentException("A senha antiga e a nova senha são obrigatórias.");
+            throw new RegraNegocioException("A senha antiga e a nova senha são obrigatórias.");
         }
 
         if (!passwordEncoder.matches(senhaAntiga.trim(), usuarioLogado.getSenha())) {
-            throw new SecurityException("A senha antiga informada está incorreta.");
+            throw new AcessoNegadoException("A senha antiga informada está incorreta.");
         }
 
         usuarioLogado.setSenha(passwordEncoder.encode(senhaNova.trim()));

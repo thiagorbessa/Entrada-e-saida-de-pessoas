@@ -173,7 +173,6 @@ public class AuditoriaController {
             return "redirect:/auditoria/backup";
         }
 
-        // Operação destrutiva exige confirmação digitada no servidor também (não só no navegador).
         if (apagar && !("APAGAR " + ano).equals(confirmacao == null ? "" : confirmacao.trim())) {
             redirect.addFlashAttribute("erro", "Confirmação incorreta. Nada foi alterado. Digite exatamente: APAGAR " + ano);
             return "redirect:/auditoria/backup";
@@ -182,7 +181,6 @@ public class AuditoriaController {
         try {
             BackupService.ResultadoArquivamento r = backupService.arquivarAno(ano, apagar);
 
-            // Mensagem atualizada incluindo a contagem de logs copiados para auditoria_logs_ANO
             String mensagem = "Backup do ano " + ano + " concluído: "
                     + r.registrosCopiados() + " registros novos copiados para registros_" + ano + ", "
                     + r.pessoasNoBackup() + " pessoas atualizadas em pessoas_" + ano + " e "
@@ -197,22 +195,19 @@ public class AuditoriaController {
                         apagar ? "BACKUP_E_APAGAR" : "BACKUP_E_MANTER",
                         "BACKUP", null, "Arquivamento do ano " + ano, mensagem);
             } catch (Exception e) {
-                // O arquivamento já foi concluído; falha no log não deve esconder isso.
                 System.err.println("Falha ao registrar log do arquivamento: " + e.getMessage());
             }
 
             redirect.addFlashAttribute("sucesso", mensagem);
+        } catch (com.br.entrada.saida.pessoas.exception.SistemaException e) {
+            redirect.addFlashAttribute("erro", e.getMessage());
         } catch (Exception e) {
             e.printStackTrace();
-            redirect.addFlashAttribute("erro", "Falha ao arquivar (nada foi apagado): " + e.getMessage());
+            redirect.addFlashAttribute("erro", "Falha inesperada ao arquivar o ano " + ano + " (nada foi apagado).");
         }
 
         return "redirect:/auditoria/backup";
     }
-
-    // ==========================================================
-    // NOVO: importar dump .sql
-    // ==========================================================
 
     @PostMapping("/backup/importar")
     public String importar(@RequestParam("arquivo") MultipartFile arquivo,
@@ -242,11 +237,12 @@ public class AuditoriaController {
             }
 
             redirect.addFlashAttribute("sucesso", mensagem);
+        } catch (com.br.entrada.saida.pessoas.exception.SistemaException e) {
+            redirect.addFlashAttribute("erro", e.getMessage());
         } catch (Exception e) {
             e.printStackTrace();
             redirect.addFlashAttribute("erro",
-                    "Falha na importação. O banco pode estar parcialmente restaurado; refaça a importação com um arquivo válido. Detalhe: "
-                            + e.getMessage());
+                    "Falha inesperada na importação. O banco pode estar parcialmente restaurado; refaça a importação com um arquivo válido.");
         }
 
         return "redirect:/auditoria/backup";

@@ -1,8 +1,9 @@
 package com.br.entrada.saida.pessoas.service;
 
+import com.br.entrada.saida.pessoas.exception.RecursoNaoEncontradoException;
+import com.br.entrada.saida.pessoas.exception.RegraNegocioException;
 import com.br.entrada.saida.pessoas.model.Pessoa;
 import com.br.entrada.saida.pessoas.model.Registro;
-import com.br.entrada.saida.pessoas.model.Unidade;
 import com.br.entrada.saida.pessoas.model.Usuario;
 import com.br.entrada.saida.pessoas.repository.PessoaRepository;
 import com.br.entrada.saida.pessoas.repository.RegistroRepository;
@@ -26,14 +27,18 @@ public class RegistroService {
 
     @Transactional
     public void registrarEntrada(UUID pessoaId, Usuario operador) {
+        if (pessoaId == null) {
+            throw new RegraNegocioException("Identificador da pessoa é obrigatório.");
+        }
+
         Pessoa pessoa = pessoaRepository.findById(pessoaId)
-                .orElseThrow(() -> new IllegalArgumentException("Pessoa não encontrada"));
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Pessoa não encontrada."));
 
         boolean existeAberto = registroRepository
                 .existsByPessoaIdAndHoraSaidaIsNull(pessoaId);
 
         if (existeAberto) {
-            throw new IllegalStateException("Pessoa já possui uma entrada aberta no sistema.");
+            throw new RegraNegocioException("Pessoa já possui uma entrada aberta no sistema.");
         }
 
         Registro registro = new Registro();
@@ -54,11 +59,15 @@ public class RegistroService {
 
     @Transactional
     public void registrarSaida(UUID registroId, Usuario operador) {
+        if (registroId == null) {
+            throw new RegraNegocioException("Identificador do registro é obrigatório.");
+        }
+
         Registro registro = registroRepository.findById(registroId)
-                .orElseThrow(() -> new IllegalArgumentException("Registro de entrada não encontrado"));
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Registro de entrada não encontrado."));
 
         if (registro.getHoraSaida() != null) {
-            throw new IllegalStateException("Este registro já foi finalizado anteriormente.");
+            throw new RegraNegocioException("Este registro já foi finalizado anteriormente.");
         }
 
         registro.setHoraSaida(LocalDateTime.now());
@@ -82,7 +91,7 @@ public class RegistroService {
         return registroRepository.findByPessoaIdOrderByHoraEntradaDesc(pessoaId, pageable);
     }
 
-    // NOVO MÉTODO: Busca o último registro cadastrado da pessoa (aberto ou já fechado)
+    // Busca o último registro cadastrado da pessoa (aberto ou já fechado)
     @Transactional(readOnly = true)
     public Registro buscarUltimoRegistroDaPessoa(UUID pessoaId) {
         return registroRepository.findFirstByPessoaIdOrderByHoraEntradaDesc(pessoaId)

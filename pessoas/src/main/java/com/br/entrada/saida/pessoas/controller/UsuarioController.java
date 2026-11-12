@@ -1,7 +1,10 @@
 package com.br.entrada.saida.pessoas.controller;
 
 import com.br.entrada.saida.pessoas.dto.UsuarioRequestDTO;
+import com.br.entrada.saida.pessoas.exception.AcessoNegadoException;
 import com.br.entrada.saida.pessoas.exception.CpfDuplicadoException;
+import com.br.entrada.saida.pessoas.exception.RegraNegocioException;
+import com.br.entrada.saida.pessoas.exception.SistemaException;
 import com.br.entrada.saida.pessoas.model.Usuario;
 import com.br.entrada.saida.pessoas.repository.UsuarioRepository;
 import com.br.entrada.saida.pessoas.service.UsuarioService;
@@ -14,7 +17,6 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.security.Principal;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -31,17 +33,21 @@ public class UsuarioController {
         return usuarioRepository.findByCpf(auth.getName()).orElse(null);
     }
 
-    @GetMapping("/novo")
-    public String novo(Model model, Authentication auth) {
-        model.addAttribute("usuario", new UsuarioRequestDTO());
-
-        Usuario usuarioLogado = getUsuarioLogado(auth);
-        boolean isGeral = auth != null && auth.getAuthorities().stream()
+    private boolean isAdminGeral(Authentication auth) {
+        return auth != null && auth.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_GERAL"));
+    }
 
+    private void prepararModelFormulario(Model model, Usuario usuarioLogado, boolean isGeral) {
         model.addAttribute("podeEscolherPerfil", isGeral);
         model.addAttribute("usuarioLogado", usuarioLogado);
         model.addAttribute("isGeralLogado", isGeral);
+    }
+
+    @GetMapping("/novo")
+    public String novo(Model model, Authentication auth) {
+        model.addAttribute("usuario", new UsuarioRequestDTO());
+        prepararModelFormulario(model, getUsuarioLogado(auth), isAdminGeral(auth));
         return "usuarios/formulario";
     }
 
@@ -49,42 +55,39 @@ public class UsuarioController {
     public String salvar(@Valid @ModelAttribute("usuario") UsuarioRequestDTO dto,
                          BindingResult result,
                          Model model,
-                         Authentication auth) {
+                         Authentication auth,
+                         RedirectAttributes redirectAttributes) {
 
         Usuario usuarioLogado = getUsuarioLogado(auth);
-        boolean isGeral = auth != null && auth.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_GERAL"));
+        boolean isGeral = isAdminGeral(auth);
 
         if (!isGeral) {
             dto.setPerfil("ROLE_USER");
         }
 
         if (result.hasErrors()) {
-            model.addAttribute("podeEscolherPerfil", isGeral);
-            model.addAttribute("usuarioLogado", usuarioLogado);
-            model.addAttribute("isGeralLogado", isGeral);
+            prepararModelFormulario(model, usuarioLogado, isGeral);
             return "usuarios/formulario";
         }
 
         try {
             usuarioService.salvar(dto, usuarioLogado);
+            redirectAttributes.addFlashAttribute("sucesso", "Usuário salvo com sucesso!");
         } catch (CpfDuplicadoException e) {
             result.rejectValue("cpf", "error.cpf", e.getMessage());
-            model.addAttribute("podeEscolherPerfil", isGeral);
-            model.addAttribute("usuarioLogado", usuarioLogado);
-            model.addAttribute("isGeralLogado", isGeral);
+            prepararModelFormulario(model, usuarioLogado, isGeral);
             return "usuarios/formulario";
-        } catch (SecurityException e) {
+        } catch (AcessoNegadoException e) {
             result.rejectValue("nomeCompleto", "error.security", e.getMessage());
-            model.addAttribute("podeEscolherPerfil", isGeral);
-            model.addAttribute("usuarioLogado", usuarioLogado);
-            model.addAttribute("isGeralLogado", isGeral);
+            prepararModelFormulario(model, usuarioLogado, isGeral);
+            return "usuarios/formulario";
+        } catch (RegraNegocioException e) {
+            result.rejectValue("nomeCompleto", "error.regra", e.getMessage());
+            prepararModelFormulario(model, usuarioLogado, isGeral);
             return "usuarios/formulario";
         } catch (Exception e) {
             result.rejectValue("nomeCompleto", "error.geral", "Erro ao salvar usuário: " + e.getMessage());
-            model.addAttribute("podeEscolherPerfil", isGeral);
-            model.addAttribute("usuarioLogado", usuarioLogado);
-            model.addAttribute("isGeralLogado", isGeral);
+            prepararModelFormulario(model, usuarioLogado, isGeral);
             return "usuarios/formulario";
         }
 
@@ -93,8 +96,7 @@ public class UsuarioController {
 
     @GetMapping
     public String listar(Model model, Authentication auth) {
-        boolean isGeral = auth != null && auth.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_GERAL"));
+        boolean isGeral = isAdminGeral(auth);
 
         List<Usuario> usuarios;
         if (isGeral) {
@@ -111,9 +113,10 @@ public class UsuarioController {
     }
 
     @DeleteMapping("/{id}")
-    public String excluir(@PathVariable Long id, Authentication auth) {
+    public String excluir(@PathVariable Long id, Authentication auth, RedirectAttributes redirectAttributes) {
         Usuario usuarioLogado = getUsuarioLogado(auth);
         usuarioService.deletar(id, usuarioLogado);
+        redirectAttributes.addFlashAttribute("sucesso", "Usuário excluído com sucesso.");
         return "redirect:/usuarios";
     }
 
@@ -121,9 +124,7 @@ public class UsuarioController {
     public String editar(@PathVariable Long id, Model model, Authentication auth) {
         Usuario usuario = usuarioService.buscarPorId(id);
         Usuario usuarioLogado = getUsuarioLogado(auth);
-
-        boolean isGeral = auth != null && auth.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_GERAL"));
+        boolean isGeral = isAdminGeral(auth);
 
         UsuarioRequestDTO dto = new UsuarioRequestDTO();
         dto.setId(usuario.getId());
@@ -133,9 +134,7 @@ public class UsuarioController {
         dto.setUnidades(usuario.getUnidades());
 
         model.addAttribute("usuario", dto);
-        model.addAttribute("podeEscolherPerfil", isGeral);
-        model.addAttribute("usuarioLogado", usuarioLogado);
-        model.addAttribute("isGeralLogado", isGeral);
+        prepararModelFormulario(model, usuarioLogado, isGeral);
         return "usuarios/formulario";
     }
 
@@ -148,8 +147,10 @@ public class UsuarioController {
             Usuario usuarioLogado = getUsuarioLogado(auth);
             usuarioService.alterarSenha(usuarioLogado, senhaAntiga, senhaNova);
             redirectAttributes.addFlashAttribute("sucesso", "Senha alterada com sucesso!");
-        } catch (Exception e) {
+        } catch (SistemaException e) {
             redirectAttributes.addFlashAttribute("erro", e.getMessage());
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("erro", "Não foi possível alterar a senha. Tente novamente.");
         }
         return "redirect:/";
     }

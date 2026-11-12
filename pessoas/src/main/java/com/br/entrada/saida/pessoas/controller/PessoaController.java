@@ -39,6 +39,10 @@ public class PessoaController {
 	private final RegistroService registroService;
 	private final UsuarioRepository usuarioRepository;
 
+	private static final java.util.Set<String> CAMPOS_ORDENACAO_PERMITIDOS = java.util.Set.of(
+			"cpf", "nome", "telefone", "unidade", "setor", "andar", "paciente", "observacao", "horaEntrada", "horaSaida"
+	);
+
 	private Usuario obterUsuarioLogado(Principal principal) {
 		if (principal == null) return null;
 		return usuarioRepository.findByCpf(principal.getName()).orElse(null);
@@ -62,16 +66,19 @@ public class PessoaController {
 	}
 
 	private Pageable ajustarPageableComOrdenacao(Pageable pageable, String sort, String direction) {
-		Sort.Direction dir = direction.equalsIgnoreCase("asc") ? Sort.Direction.ASC : Sort.Direction.DESC;
+		Sort.Direction dir = "desc".equalsIgnoreCase(direction) ? Sort.Direction.DESC : Sort.Direction.ASC;
+		String campoSeguro = (sort != null && CAMPOS_ORDENACAO_PERMITIDOS.contains(sort)) ? sort : "nome";
 
-		if ("horaEntrada".equals(sort) || "horaSaida".equals(sort)) {
-			// Ignoramos completamente o prefixo de propriedade
-			// O uso do JpaSort avisa ao Spring para não procurar as propriedades "horaEntrada/Saida" no objeto Pessoa
+		if ("horaEntrada".equals(campoSeguro)) {
 			return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),
-					JpaSort.unsafe(dir, "(" + sort + ")"));
+					JpaSort.unsafe(dir, "r.horaEntrada"));
+		}
+		if ("horaSaida".equals(campoSeguro)) {
+			return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),
+					JpaSort.unsafe(dir, "r.horaSaida"));
 		}
 
-		return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by(dir, sort));
+		return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by(dir, campoSeguro));
 	}
 
 	@GetMapping

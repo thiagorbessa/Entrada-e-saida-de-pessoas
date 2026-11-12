@@ -1,5 +1,6 @@
 package com.br.entrada.saida.pessoas.controller;
 
+import com.br.entrada.saida.pessoas.exception.RecursoNaoEncontradoException;
 import com.br.entrada.saida.pessoas.model.Usuario;
 import com.br.entrada.saida.pessoas.repository.UsuarioRepository;
 import com.br.entrada.saida.pessoas.service.RegistroService;
@@ -25,16 +26,11 @@ public class RegistroController {
     public String registrarEntrada(@RequestParam("pessoaId") UUID pessoaId,
                                    Authentication auth,
                                    RedirectAttributes redirectAttributes) {
-        try {
-            Usuario operador = usuarioRepository.findByCpf(auth.getName())
-                    .orElseThrow(() -> new RuntimeException("Operador não encontrado"));
+        Usuario operador = usuarioRepository.findByCpf(auth.getName())
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Operador autenticado não encontrado."));
 
-            registroService.registrarEntrada(pessoaId, operador);
-            redirectAttributes.addFlashAttribute("sucesso", "Entrada registrada com sucesso!");
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("erro", e.getMessage());
-        }
-
+        registroService.registrarEntrada(pessoaId, operador);
+        redirectAttributes.addFlashAttribute("sucesso", "Entrada registrada com sucesso!");
         return "redirect:/pessoas";
     }
 
@@ -43,16 +39,11 @@ public class RegistroController {
                                  @RequestParam(value = "pessoaId", required = false) UUID pessoaId,
                                  Authentication auth,
                                  RedirectAttributes redirectAttributes) {
-        try {
-            Usuario operador = usuarioRepository.findByCpf(auth.getName())
-                    .orElseThrow(() -> new RuntimeException("Operador não encontrado"));
+        Usuario operador = usuarioRepository.findByCpf(auth.getName())
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Operador autenticado não encontrado."));
 
-            registroService.registrarSaida(registroId, operador);
-            redirectAttributes.addFlashAttribute("sucesso", "Saída registrada com sucesso!");
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("erro", e.getMessage());
-        }
-
+        registroService.registrarSaida(registroId, operador);
+        redirectAttributes.addFlashAttribute("sucesso", "Saída registrada com sucesso!");
         return "redirect:/pessoas";
     }
 }

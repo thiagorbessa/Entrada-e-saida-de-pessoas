@@ -1,7 +1,7 @@
 package com.br.entrada.saida.pessoas.exception;
 
-public class CpfPessoaDuplicadoException extends RuntimeException {
+public class CpfPessoaDuplicadoException extends RegraNegocioException {
     public CpfPessoaDuplicadoException(String message) {
-        super(message);
+        super("CPF duplicado", message);
     }
 }

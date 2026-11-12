@@ -1,7 +1,10 @@
 package com.br.entrada.saida.pessoas.service;
 
 import com.br.entrada.saida.pessoas.dto.PessoaRequestDTO;
+import com.br.entrada.saida.pessoas.exception.AcessoNegadoException;
 import com.br.entrada.saida.pessoas.exception.CpfPessoaDuplicadoException;
+import com.br.entrada.saida.pessoas.exception.RecursoNaoEncontradoException;
+import com.br.entrada.saida.pessoas.exception.RegraNegocioException;
 import com.br.entrada.saida.pessoas.model.Pessoa;
 import com.br.entrada.saida.pessoas.model.Usuario;
 import com.br.entrada.saida.pessoas.repository.PessoaRepository;
@@ -27,16 +30,16 @@ public class PessoaService {
         return "ROLE_GERAL".equals(perfil) || "ROLE_ADMIN".equals(perfil);
     }
 
-    // Listagem paginada padrão com suporte a 100 itens por página
+    // Listagem paginada padrão utilizando a query com LEFT JOIN para suportar ordenação por entrada/saída
     @Transactional(readOnly = true)
     public Page<Pessoa> listarPorUsuarioPaginado(Usuario usuario, Pageable pageable) {
         if (isAdmin(usuario)) {
-            return pessoaRepository.findAll(pageable);
+            return pessoaRepository.buscarPorTermoPaginado(null, pageable);
         }
         if (usuario == null || usuario.getUnidades() == null || usuario.getUnidades().isEmpty()) {
             return Page.empty(pageable);
         }
-        return pessoaRepository.findByUnidadeIn(usuario.getUnidades(), pageable);
+        return pessoaRepository.buscarPorTermoEUnidadesPaginado(null, usuario.getUnidades(), pageable);
     }
 
     // Mantido para compatibilidade caso algum outro lugar chame sem paginação
@@ -70,7 +73,7 @@ public class PessoaService {
     @Transactional(readOnly = true)
     public Pessoa buscarPorId(UUID id) {
         return pessoaRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Pessoa não encontrada."));
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Pessoa não encontrada."));
     }
 
     @Transactional
@@ -81,13 +84,21 @@ public class PessoaService {
         if (!administrador) {
             if (usuarioLogado == null || usuarioLogado.getUnidades() == null || dto.getUnidade() == null
                     || !usuarioLogado.getUnidades().contains(dto.getUnidade())) {
-                throw new SecurityException("Você não tem permissão para cadastrar ou vincular pessoas nesta unidade.");
+                throw new AcessoNegadoException("Você não tem permissão para cadastrar ou vincular pessoas nesta unidade.");
             }
         }
 
         String cpfLimpo = dto.getCpf() != null ? dto.getCpf().replaceAll("[^\\d]", "") : null;
         boolean cpfDuplicado = false;
-        UUID pessoaId = (dto.getId() != null && !dto.getId().isBlank()) ? UUID.fromString(dto.getId()) : null;
+        UUID pessoaId = null;
+
+        if (dto.getId() != null && !dto.getId().isBlank()) {
+            try {
+                pessoaId = UUID.fromString(dto.getId().trim());
+            } catch (IllegalArgumentException e) {
+                throw new RegraNegocioException("Identificador de pessoa inválido.");
+            }
+        }
 
         if (cpfLimpo != null && !cpfLimpo.isBlank()) {
             if (pessoaId == null) {
@@ -114,10 +125,10 @@ public class PessoaService {
             // Validação de unidade na edição para usuário comum
             if (!administrador) {
                 if (pessoa.getUnidade() != null && !usuarioLogado.getUnidades().contains(pessoa.getUnidade())) {
-                    throw new SecurityException("Você não tem permissão para alterar o cadastro desta pessoa (unidade diferente).");
+                    throw new AcessoNegadoException("Você não tem permissão para alterar o cadastro desta pessoa (unidade diferente).");
                 }
                 if (!usuarioLogado.getUnidades().contains(dto.getUnidade())) {
-                    throw new SecurityException("Você não pode transferir este cadastro para uma unidade sem permissão.");
+                    throw new AcessoNegadoException("Você não pode transferir este cadastro para uma unidade sem permissão.");
                 }
             }
 
@@ -149,13 +160,14 @@ public class PessoaService {
     @Transactional
     public void deletar(UUID id, Usuario usuarioLogado) {
         if (!isAdmin(usuarioLogado)) {
-            throw new SecurityException("Acesso negado: apenas administradores (Geral ou Sistema) podem excluir registros.");
+            throw new AcessoNegadoException("Acesso negado: apenas administradores (Geral ou Sistema) podem excluir registros.");
         }
 
         Pessoa pessoa = buscarPorId(id);
         auditoriaService.registrar(usuarioLogado, "EXCLUSAO", "PESSOA", pessoa.getId(), pessoa.getNome(), "Excluiu o registro da pessoa");
         pessoaRepository.delete(pessoa);
     }
+
     @Transactional(readOnly = true)
     public Page<Pessoa> buscarPorTermoEUsuarioPaginado(String termo, Usuario usuario, Pageable pageable) {
         if (termo == null || termo.isBlank()) {
