@@ -300,6 +300,15 @@
         const obs = elemento.getAttribute('data-obs');
         alert("Observação completa:\n\n" + obs);
     }
+
+    // Oculta automaticamente os alertas de sucesso após 3 segundos
+    document.querySelectorAll('.alert-sucesso').forEach(alerta => {
+        setTimeout(() => {
+            alerta.style.transition = 'opacity 0.5s ease';
+            alerta.style.opacity = '0';
+            setTimeout(() => alerta.remove(), 500);
+        }, 3000);
+    });
 </script>
 </body>
 </html>

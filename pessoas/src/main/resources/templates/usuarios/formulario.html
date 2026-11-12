@@ -118,6 +118,16 @@
                 <button type="button" id="limpar" class="btn btn-limpar">Limpar</button>
             </div>
         </form>
+        <div th:if="${usuario.id != null and isGeralLogado}"
+             style="margin-top: 25px; padding-top: 20px; border-top: 1px solid #edf2f7;">
+            <div th:if="${sucesso}" class="alert alert-sucesso">
+                <span th:text="${sucesso}"></span>
+            </div>
+            <form th:action="@{/2fa/resetar/{id}(id=${usuario.id})}" method="post"
+                  onsubmit="return confirm('Deseja realmente resetar a autenticação em duas etapas deste usuário?');">
+                <button type="submit" class="btn btn-perigo">Resetar Autenticação 2FA deste Usuário</button>
+            </form>
+        </div>
     </div>
 
     <script>

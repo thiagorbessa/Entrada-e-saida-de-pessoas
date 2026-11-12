@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Autenticação em Duas Etapas (2FA)</title>
+    <link rel="stylesheet" th:href="@{/css/estilo.css}" />
+</head>
+<body>
+<header>
+    <nav>
+        <ul class="nav-links">
+            <li><a th:href="@{/}">Entrada e Saída</a></li>
+            <li><a th:href="@{/pessoas}">Listar</a></li>
+            <li><a th:href="@{/pessoas/novo}">Novo</a></li>
+            <li sec:authorize="hasAnyRole('SISTEMA', 'GERAL')">
+                <a th:href="@{/usuarios}">Cadastro de Usuários</a>
+            </li>
+            <li sec:authorize="hasRole('ROLE_GERAL')">
+                <a th:href="@{/auditoria/logs}">Logs de Auditoria</a>
+            </li>
+        </ul>
+
+        <div class="nav-usuario" sec:authorize="isAuthenticated()">
+            <a th:href="@{/}" class="link-usuario-logado">
+                👤 <span th:text="${usuarioLogado != null ? usuarioLogado.nomeCompleto : #authentication.name}">Usuário</span>
+            </a>
+            <form th:action="@{/logout}" method="post" class="form-logout-inline">
+                <button type="submit" class="btn-logout-link">Sair</button>
+            </form>
+        </div>
+    </nav>
+</header>
+
+<main class="container-principal">
+    <div class="card-formulario" style="max-width: 620px;">
+        <div class="titulo-secao">
+            <h1>Verificação em Duas Etapas (Google Authenticator)</h1>
+        </div>
+
+        <div th:if="${sucesso}" class="alert alert-sucesso">
+            <span th:text="${sucesso}"></span>
+        </div>
+        <div th:if="${erro}" class="alert alert-erro">
+            <span th:text="${erro}"></span>
+        </div>
+
+        <!-- MODO 1: 2FA AINDA NÃO ATIVADO (EXIBE QR CODE) -->
+        <div th:if="${!mfaAtivo}">
+            <ol style="color: #495057; line-height: 1.7; padding-left: 20px; margin-bottom: 20px;">
+                <li>Instale o aplicativo <strong>Google Authenticator</strong> (Android ou iOS).</li>
+                <li>Toque em <strong>+</strong> e selecione <strong>Ler um código QR</strong>.</li>
+                <li>Aponte a câmera para o QR Code abaixo e digite o código de 6 dígitos gerado:</li>
+            </ol>
+
+            <div style="text-align: center; margin: 20px 0;">
+                <img th:src="${qrCodeUri}" alt="QR Code Google Authenticator"
+                     style="width: 210px; height: 210px; border: 1px solid #ced4da; border-radius: 8px; padding: 8px; background: #fff;" />
+            </div>
+
+            <div style="background: #f8f9fa; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px; text-align: center; margin-bottom: 22px;">
+                <span style="font-size: 0.85rem; color: #6c757d; display: block;">Chave manual (caso não consiga ler a câmera):</span>
+                <strong style="font-family: monospace; font-size: 1.05rem; letter-spacing: 2px;" th:text="${secretManual}"></strong>
+            </div>
+
+            <form th:action="@{/2fa/ativar}" method="post" autocomplete="off">
+                <div class="form-group mb-20">
+                    <label for="codigoAtivar">Código de 6 dígitos do aplicativo: <span class="obrigatorio">*</span></label>
+                    <input type="text" id="codigoAtivar" name="codigo" inputmode="numeric" pattern="[0-9]{6}"
+                           maxlength="6" placeholder="000000" required class="form-control"
+                           style="text-align: center; font-size: 1.3rem; letter-spacing: 5px; font-weight: 700;" />
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-salvar">Confirmar e Ativar 2FA</button>
+                    <a th:href="@{/}" class="btn btn-limpar">Voltar</a>
+                </div>
+            </form>
+        </div>
+
+        <!-- MODO 2: 2FA JÁ ATIVADO -->
+        <div th:if="${mfaAtivo}">
+            <div class="alert alert-sucesso" style="margin-bottom: 20px;">
+                <strong>Status: Ativo.</strong> Sua conta está protegida pelo Google Authenticator.
+            </div>
+
+            <p style="color: #495057; margin-bottom: 20px;">
+                Caso deseje desativar a verificação em duas etapas, digite abaixo o código atual de 6 dígitos exibido no seu aplicativo:
+            </p>
+
+            <form th:action="@{/2fa/desativar}" method="post" autocomplete="off">
+                <div class="form-group mb-20">
+                    <label for="codigoDesativar">Código atual de 6 dígitos: <span class="obrigatorio">*</span></label>
+                    <input type="text" id="codigoDesativar" name="codigo" inputmode="numeric" pattern="[0-9]{6}"
+                           maxlength="6" placeholder="000000" required class="form-control"
+                           style="text-align: center; font-size: 1.3rem; letter-spacing: 5px; font-weight: 700;" />
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-perigo">Desativar 2FA</button>
+                    <a th:href="@{/}" class="btn btn-limpar">Voltar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</main>
+</body>
+</html>

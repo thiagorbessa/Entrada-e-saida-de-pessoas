@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Verificação em Duas Etapas</title>
+    <link rel="stylesheet" th:href="@{/css/estilo.css}" />
+</head>
+<body>
+<header>
+    <nav>
+
+        <div class="nav-usuario">
+            <form th:action="@{/logout}" method="post" class="form-logout-inline">
+                <button type="submit" class="btn-logout-link">Cancelar e Sair</button>
+            </form>
+        </div>
+    </nav>
+</header>
+
+<main class="container-principal">
+    <div class="card-login">
+        <div class="titulo-secao text-center">
+            <h1>Verificação em Duas Etapas</h1>
+        </div>
+
+        <p style="text-align: center; color: #495057; margin-bottom: 20px;">
+            Abra o aplicativo <strong>Google Authenticator</strong> no seu celular e digite o código de 6 dígitos gerado para a sua conta.
+        </p>
+
+        <div th:if="${erro}" class="alert alert-erro text-center">
+            <strong th:text="${erro}"></strong>
+        </div>
+
+        <form th:action="@{/login-2fa}" method="post" autocomplete="off">
+            <div class="form-group mb-25">
+                <label for="codigo">Código de 6 dígitos:</label>
+                <input type="text" id="codigo" name="codigo" inputmode="numeric" pattern="[0-9]{6}"
+                       maxlength="6" placeholder="000000" required autofocus
+                       class="form-control"
+                       style="text-align: center; font-size: 1.5rem; letter-spacing: 6px; font-weight: 700;" />
+            </div>
+
+            <button type="submit" class="btn btn-salvar btn-block">Verificar e Entrar</button>
+        </form>
+    </div>
+</main>
+</body>
+</html>

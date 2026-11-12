@@ -31,6 +31,12 @@ public class Usuario {
     @Column(nullable = false)
     private String perfil; // Ex: ROLE_GERAL, ROLE_SISTEMA, ROLE_USER
 
+    @Column(name = "secret_2fa")
+    private String secret2fa;
+
+    @Column(name = "mfa_ativo", nullable = false)
+    private boolean mfaAtivo = false;
+
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "usuario_unidades", joinColumns = @JoinColumn(name = "usuario_id"))
     @Enumerated(EnumType.STRING)
