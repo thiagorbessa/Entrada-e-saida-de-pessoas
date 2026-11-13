@@ -12,13 +12,14 @@
 <header>
 	<nav>
 		<ul class="nav-links">
-			<li><a th:href="@{/}"> Entrada e Saída </a></li>
+			<li><a th:href="@{/}"> Início </a></li>
 
 			<li sec:authorize="isAuthenticated()">
-				<a th:href="@{/pessoas}"> Listar </a>
+				<a th:href="@{/pessoas}"> Fluxo de Entrada e Saída </a>
 			</li>
-			<li sec:authorize="isAuthenticated()">
-				<a th:href="@{/pessoas/novo}"> Novo </a>
+
+			<li sec:authorize="hasAnyRole('SISTEMA', 'GERAL')">
+				<a th:href="@{/usuarios}"> Usuários </a>
 			</li>
 
 			<li sec:authorize="hasRole('ROLE_GERAL')">
@@ -29,14 +30,9 @@
 			<li sec:authorize="hasRole('ROLE_GERAL')">
 				<a th:href="@{/auditoria/backup}">Backups</a>
 			</li>
-
-			<li sec:authorize="hasAnyRole('SISTEMA', 'GERAL')">
-				<a th:href="@{/usuarios}"> Cadastro de Usuários </a>
-			</li>
-
-			<!-- Abre a modal popup de alterar senha -->
+			
 			<li sec:authorize="isAuthenticated()">
-				<a href="javascript:void(0);" onclick="abrirModalSenha()">Alterar Senha</a>
+				<a href="javascript:void(0);" onclick="abrirModalSenha()">Alterar sua Senha</a>
 			</li>
 		</ul>
 

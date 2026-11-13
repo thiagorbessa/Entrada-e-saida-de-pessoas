@@ -12,11 +12,16 @@
 <header>
     <nav>
         <ul class="nav-links">
-            <li><a th:href="@{/}"> Entrada e Saída </a></li>
-            <li><a th:href="@{/pessoas}"> Listar </a></li>
-            <li><a th:href="@{/pessoas/novo}"> Novo </a></li>
+            <li><a th:href="@{/}"> Início </a></li>
+
+            <li sec:authorize="isAuthenticated()">
+                <a th:href="@{/pessoas}"> Fluxo de Entrada e Saída </a>
+            </li>
+            <li sec:authorize="isAuthenticated()">
+                <a th:href="@{/pessoas/novo}"> Novo Cadastro </a>
+            </li>
             <li sec:authorize="hasAnyRole('SISTEMA', 'GERAL')">
-                <a th:href="@{/usuarios}"> Cadastro de Usuários </a>
+                <a th:href="@{/usuarios}"> Usuários </a>
             </li>
             <li sec:authorize="hasRole('ROLE_GERAL')">
                 <a th:href="@{/auditoria/logs}">Logs de Auditoria</a>

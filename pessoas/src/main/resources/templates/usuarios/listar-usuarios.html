@@ -12,9 +12,12 @@
 <header>
     <nav>
         <ul class="nav-links">
-            <li><a th:href="@{/}">Entrada e Saída</a></li>
-            <li><a th:href="@{/pessoas}">Listar</a></li>
-            <li><a th:href="@{/pessoas/novo}">Novo</a></li>
+            <li><a th:href="@{/}"> Início </a></li>
+
+            <li sec:authorize="isAuthenticated()">
+                <a th:href="@{/pessoas}"> Fluxo de Entrada e Saída </a>
+            </li>
+
             <li sec:authorize="hasAnyRole('SISTEMA', 'GERAL')">
                 <a th:href="@{/usuarios}">Usuários</a>
             </li>
@@ -37,9 +40,7 @@
 
 <main class="container-principal">
     <div class="card-tabela">
-        <div class="titulo-secao">
-            <h1>Gestão de Usuários do Sistema</h1>
-        </div>
+
         <div class="titulo-secao">
             <h1>Gestão de Usuários do Sistema</h1>
         </div>
