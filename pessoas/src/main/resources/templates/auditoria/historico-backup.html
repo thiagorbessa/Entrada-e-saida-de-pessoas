@@ -8,15 +8,7 @@
 </head>
 
 <body>
-<header>
-    <nav>
-        <ul class="nav-links">
-            <li><a th:href="@{/}">Início</a></li>
-            <li><a th:href="@{/auditoria/backup}">Voltar para Backups</a></li>
-        </ul>
-    </nav>
-</header>
-
+<div th:replace="fragments/header :: app-header"></div>
 <main class="container-principal" style="padding: 20px;">
 
     <section>

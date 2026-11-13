@@ -9,15 +9,8 @@
 </head>
 
 <body>
-<header>
-    <nav>
-        <ul class="nav-links">
-            <li><a th:href="@{/}"> Início </a></li>
-            <li><a th:href="@{/pessoas}"> Listar Pessoas </a></li>
-            <li><a th:href="@{/auditoria/backup}"> ⬅ Voltar para Seleção de Ano </a></li>
-        </ul>
-    </nav>
-</header>
+
+<div th:replace="fragments/header :: app-header"></div>
 
 <main class="container-principal">
     <div class="card-tabela">

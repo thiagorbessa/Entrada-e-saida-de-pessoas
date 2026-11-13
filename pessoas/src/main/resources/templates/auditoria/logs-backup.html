@@ -8,22 +8,8 @@
     <link rel="stylesheet" th:href="@{/css/estilo.css}" />
 </head>
 <body>
-<header>
-    <nav>
-        <ul class="nav-links">
-            <li><a th:href="@{/}"> Início </a></li>
 
-            <li sec:authorize="isAuthenticated()">
-                <a th:href="@{/pessoas}"> Fluxo de Entrada e Saída </a>
-            </li>
-            <li sec:authorize="hasAnyRole('SISTEMA', 'GERAL')">
-                <a th:href="@{/usuarios}"> Usuários </a>
-            </li>
-            <li><a th:href="@{/auditoria/logs}">Logs de Auditoria</a></li>
-            <li><a th:href="@{/auditoria/backup}">Backup de Logs</a></li>
-        </ul>
-    </nav>
-</header>
+<div th:replace="fragments/header :: app-header"></div>
 
 <main class="container-principal">
     <div class="card-welcome" style="max-width: 1000px; margin: 30px auto;">

@@ -9,35 +9,8 @@
 </head>
 
 <body>
-<header>
-    <nav>
-        <ul class="nav-links">
-            <li><a th:href="@{/}"> Início </a></li>
 
-            <li sec:authorize="isAuthenticated()">
-                <a th:href="@{/pessoas}"> Fluxo de Entrada e Saída </a>
-            </li>
-            <li sec:authorize="isAuthenticated()">
-                <a th:href="@{/pessoas/novo}"> Novo Cadastro </a>
-            </li>
-            <li sec:authorize="hasAnyRole('SISTEMA', 'GERAL')">
-                <a th:href="@{/usuarios}"> Usuários </a>
-            </li>
-            <li sec:authorize="hasRole('ROLE_GERAL')">
-                <a th:href="@{/auditoria/logs}">Logs de Auditoria</a>
-            </li>
-        </ul>
-
-        <div class="nav-usuario" sec:authorize="isAuthenticated()">
-            <a th:href="@{/}" class="link-usuario-logado" title="Ir para a página inicial">
-                👤 <span th:text="${usuarioLogado != null ? usuarioLogado.nomeCompleto : #authentication.name}">Usuário</span>
-            </a>
-            <form th:action="@{/logout}" method="post" class="form-logout-inline">
-                <button type="submit" class="btn-logout-link">Sair</button>
-            </form>
-        </div>
-    </nav>
-</header>
+<div th:replace="fragments/header :: app-header"></div>
 
 <main class="container-principal">
     <div class="card-formulario">
