@@ -55,6 +55,7 @@
 			<div class="welcome-actions">
 				<a th:href="@{/pessoas}" class="btn btn-salvar text-decoration-none">Acessar Listagem</a>
 				<a th:href="@{/2fa/configurar}" class="btn btn-consulta text-decoration-none">Autenticação 2FA</a>
+				<button type="button" class="btn btn-limpar" onclick="abrirModalSenha()">Alterar Minha Senha</button>
 			</div>
 		</div>
 	</section>
@@ -67,6 +68,7 @@
 				<button type="button" class="close-btn" onclick="fecharModalSenha()">&times;</button>
 			</div>
 			<form th:action="@{/usuarios/alterar-senha-propria}" method="post">
+				<input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
 				<div class="form-group mb-15">
 					<label for="senhaAntiga">Senha Antiga:</label>
 					<input type="password" id="senhaAntiga" name="senhaAntiga" class="form-control" required />
