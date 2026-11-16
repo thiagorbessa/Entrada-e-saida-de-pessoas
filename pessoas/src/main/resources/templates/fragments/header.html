@@ -14,6 +14,10 @@
                 <a th:href="@{/pessoas}"> Fluxo de Entrada e Saída </a>
             </li>
 
+            <li sec:authorize="isAuthenticated()">
+                <a th:href="@{/internacao}"> Internação </a>
+            </li>
+
             <li sec:authorize="hasAnyRole('SISTEMA', 'GERAL')">
                 <a th:href="@{/usuarios}"> Usuários </a>
             </li>

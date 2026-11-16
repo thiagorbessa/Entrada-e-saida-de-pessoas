@@ -36,21 +36,20 @@ public class BackupService {
                                         boolean apagou,
                                         int registrosCopiados,
                                         int pessoasNoBackup,
+                                        int pacientesInternadosNoBackup,
+                                        int acompanhantesCopiados,
                                         int logsCopiados,
                                         int registrosApagados,
-                                        int pessoasApagadas) {}
+                                        int pessoasApagadas,
+                                        int pacientesInternadosApagados,
+                                        int acompanhantesApagados) {}
 
     private final JdbcTemplate jdbcTemplate;
     private final PlatformTransactionManager transactionManager;
 
-    /** Dumps feitos com --all-databases / --databases (trazem CREATE DATABASE) nunca devem rodar por aqui. */
     private static final Pattern DUMP_DE_SERVIDOR = Pattern.compile(
             "^\\s*(CREATE\\s+DATABASE|DROP\\s+DATABASE|--\\s*Current Database:)", Pattern.CASE_INSENSITIVE);
 
-    /**
-     * Comandos que mexem nas tabelas de log (log_auditoria, logs_AAAA). A importação NUNCA as toca:
-     * o log atual é preservado. Cobre também o DROP TABLE IF EXISTS, que antes passava.
-     */
     private static final Pattern COMANDO_DE_TABELA_DE_LOG = Pattern.compile(
             "^(/\\*!\\d+\\s+)?(DROP TABLE|CREATE TABLE|LOCK TABLES|ALTER TABLE|INSERT INTO)\\s+"
                     + "(IF NOT EXISTS\\s+|IF EXISTS\\s+)?`?LOG", Pattern.CASE_INSENSITIVE);
@@ -63,12 +62,15 @@ public class BackupService {
         String tReg = "registros_" + ano;
         String tPes = "pessoas_" + ano;
         String tLog = "logs_" + ano;
+        String tPacInt = "pacientes_internados_" + ano;
+        String tAcomp = "acompanhantes_" + ano;
 
         try {
-            // DDL com os nomes corretos das tabelas do MySQL
             jdbcTemplate.execute("CREATE TABLE IF NOT EXISTS " + tReg + " LIKE registros");
             jdbcTemplate.execute("CREATE TABLE IF NOT EXISTS " + tPes + " LIKE pessoas");
             jdbcTemplate.execute("CREATE TABLE IF NOT EXISTS " + tLog + " LIKE log_auditoria");
+            jdbcTemplate.execute("CREATE TABLE IF NOT EXISTS " + tPacInt + " LIKE pacientes_internados");
+            jdbcTemplate.execute("CREATE TABLE IF NOT EXISTS " + tAcomp + " LIKE acompanhantes");
         } catch (DataAccessException e) {
             log.error("Erro ao criar tabelas de backup para o ano {}", ano, e);
             throw new RegraNegocioException("Falha na estrutura de backup",
@@ -78,6 +80,8 @@ public class BackupService {
         List<String> colsReg = colunasComuns("registros", tReg);
         List<String> colsPes = colunasComuns("pessoas", tPes);
         List<String> colsLog = colunasComuns("log_auditoria", tLog);
+        List<String> colsPacInt = colunasComuns("pacientes_internados", tPacInt);
+        List<String> colsAcomp = colunasComuns("acompanhantes", tAcomp);
 
         Timestamp inicio = Timestamp.valueOf(LocalDateTime.of(ano, 1, 1, 0, 0));
         Timestamp fim = Timestamp.valueOf(LocalDateTime.of(ano + 1, 1, 1, 0, 0));
@@ -100,7 +104,22 @@ public class BackupService {
                         "INSERT INTO " + tPes + " (" + listar(colsPes, null) + ") " +
                                 "SELECT " + listar(colsPes, null) + " FROM pessoas");
 
-                // 3) Logs de Auditoria (tabela real: log_auditoria)
+                // 3) Pacientes Internados (atualiza todos no backup para manter integridade de FK com acompanhantes)
+                jdbcTemplate.update("DELETE d FROM " + tPacInt + " d JOIN pacientes_internados p ON p.id = d.id");
+                int pacientesInternadosNoBackup = jdbcTemplate.update(
+                        "INSERT INTO " + tPacInt + " (" + listar(colsPacInt, null) + ") " +
+                                "SELECT " + listar(colsPacInt, null) + " FROM pacientes_internados");
+
+                // 4) Acompanhantes fechados do ano
+                int acompanhantesCopiados = jdbcTemplate.update(
+                        "INSERT INTO " + tAcomp + " (" + listar(colsAcomp, null) + ") " +
+                                "SELECT " + listar(colsAcomp, "a") + " FROM acompanhantes a " +
+                                "WHERE a.hora_saida IS NOT NULL " +
+                                "AND a.hora_entrada >= ? AND a.hora_entrada < ? " +
+                                "AND NOT EXISTS (SELECT 1 FROM " + tAcomp + " d WHERE d.id = a.id)",
+                        inicio, fim);
+
+                // 5) Logs de Auditoria (inclui todos os módulos: PESSOA, USUARIO, PACIENTE_INTERNADO, ACOMPANHANTE, etc.)
                 int logsCopiados = jdbcTemplate.update(
                         "INSERT INTO " + tLog + " (" + listar(colsLog, null) + ") " +
                                 "SELECT " + listar(colsLog, "l") + " FROM log_auditoria l " +
@@ -110,6 +129,8 @@ public class BackupService {
 
                 int registrosApagados = 0;
                 int pessoasApagadas = 0;
+                int acompanhantesApagados = 0;
+                int pacientesInternadosApagados = 0;
 
                 if (apagar) {
                     registrosApagados = jdbcTemplate.update(
@@ -122,10 +143,29 @@ public class BackupService {
                             "DELETE p FROM pessoas p JOIN " + tPes + " dp ON dp.id = p.id " +
                                     "WHERE EXISTS (SELECT 1 FROM " + tReg + " dr WHERE dr.pessoa_id = p.id) " +
                                     "AND NOT EXISTS (SELECT 1 FROM registros r WHERE r.pessoa_id = p.id)");
+
+                    // Remove acompanhantes já arquivados e fechados do ano
+                    acompanhantesApagados = jdbcTemplate.update(
+                            "DELETE a FROM acompanhantes a JOIN " + tAcomp + " d ON d.id = a.id " +
+                                    "WHERE a.hora_saida IS NOT NULL " +
+                                    "AND a.hora_entrada >= ? AND a.hora_entrada < ?",
+                            inicio, fim);
+
+                    // Remove pacientes internados já encerrados no ano que não têm mais acompanhantes ativos/pendentes
+                    pacientesInternadosApagados = jdbcTemplate.update(
+                            "DELETE p FROM pacientes_internados p JOIN " + tPacInt + " dp ON dp.id = p.id " +
+                                    "WHERE p.hora_saida IS NOT NULL " +
+                                    "AND p.hora_entrada >= ? AND p.hora_entrada < ? " +
+                                    "AND NOT EXISTS (SELECT 1 FROM acompanhantes a WHERE a.paciente_id = p.id)",
+                            inicio, fim);
                 }
 
-                return new ResultadoArquivamento(ano, apagar, registrosCopiados, pessoasNoBackup,
-                        logsCopiados, registrosApagados, pessoasApagadas);
+                return new ResultadoArquivamento(ano, apagar,
+                        registrosCopiados, pessoasNoBackup,
+                        pacientesInternadosNoBackup, acompanhantesCopiados,
+                        logsCopiados,
+                        registrosApagados, pessoasApagadas,
+                        pacientesInternadosApagados, acompanhantesApagados);
             });
 
             if (resultado == null) {
@@ -148,13 +188,14 @@ public class BackupService {
             return false;
         }
 
-        String tReg = "registros_" + ano;
-        String tPes = "pessoas_" + ano;
-        String tLog = "logs_" + ano;
-
         String sql = "SELECT COUNT(*) FROM information_schema.TABLES " +
-                "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME IN (?, ?, ?)";
-        Integer count = jdbcTemplate.queryForObject(sql, Integer.class, tReg, tPes, tLog);
+                "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME IN (?, ?, ?, ?, ?)";
+        Integer count = jdbcTemplate.queryForObject(sql, Integer.class,
+                "registros_" + ano,
+                "pessoas_" + ano,
+                "logs_" + ano,
+                "pacientes_internados_" + ano,
+                "acompanhantes_" + ano);
         return count != null && count > 0;
     }
 
@@ -191,7 +232,6 @@ public class BackupService {
 
         StringBuilder sqlLimpo = new StringBuilder();
 
-        // Fase 1: só LÊ e valida o arquivo. Nada é executado no banco até terminar sem erro.
         try (InputStream in = arquivo.getInputStream();
              BufferedReader reader = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8))) {
 
@@ -207,14 +247,12 @@ public class BackupService {
                                     "Use o arquivo backup_<banco>_<data>.sql. Nada foi alterado no banco.");
                 }
 
-                // DELIMITER (triggers/rotinas/eventos) não é suportado pelo ScriptUtils.
                 if (t.regionMatches(true, 0, "DELIMITER", 0, 9)) {
                     throw new RegraNegocioException("Backup incompatível",
                             "Este backup contém rotinas/triggers/eventos (DELIMITER), que esta tela não consegue restaurar. " +
                                     "Gere o backup com o backup-banco.bat/.sh atualizado ou restaure por linha de comando. Nada foi alterado no banco.");
                 }
 
-                // Tabelas de log: o log atual é preservado, então todo comando sobre elas é descartado.
                 if (COMANDO_DE_TABELA_DE_LOG.matcher(t).find()) {
                     ignorarBloco = true;
                 }
@@ -225,7 +263,6 @@ public class BackupService {
                     continue;
                 }
 
-                // Dump antigo (sem --hex-blob): os ids BINARY(16) vêm como _binary '...' e podem quebrar o parser.
                 if (t.regionMatches(true, 0, "INSERT INTO", 0, 11) && linha.contains("_binary")) {
                     throw new RegraNegocioException("Backup antigo incompatível",
                             "Este backup foi gerado sem --hex-blob (ids em _binary) e não pode ser importado com segurança. " +
@@ -252,7 +289,6 @@ public class BackupService {
                 StandardCharsets.UTF_8
         );
 
-        // Fase 2: executa tudo na MESMA conexão (FOREIGN_KEY_CHECKS é variável de sessão).
         try {
             jdbcTemplate.execute((ConnectionCallback<Void>) con -> {
                 try (Statement st = con.createStatement()) {

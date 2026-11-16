@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-br" xmlns="http://www.w3.org/1999/xhtml"
-      xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.w3.org/1999/xhtml">
+      xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -12,22 +12,20 @@
 <div th:replace="fragments/header :: app-header"></div>
 
 <main class="container-principal">
-    <div class="card-welcome" style="max-width: 1000px; margin: 30px auto;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h1 th:text="'Logs Arquivados do Ano: ' + ${ano}"></h1>
-            <a th:href="@{/auditoria/backup(ano=${ano})}" class="btn" style="background-color: #718096; color: #fff; text-decoration: none; padding: 8px 15px; border-radius: 4px;">
+    <div class="card-tabela">
+        <div class="titulo-secao" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+            <h1 style="margin: 0; border: 0; padding: 0;" th:text="'Logs Arquivados do Ano: ' + ${ano}"></h1>
+            <a th:href="@{/auditoria/backup(ano=${ano})}" class="btn btn-limpar">
                 ← Voltar para Backups
             </a>
         </div>
 
-        <!-- Mensagem se não houver logs -->
         <div th:if="${logs == null or logs.isEmpty()}" class="alert alert-erro">
-            <p>Nenhum log de auditoria encontrado para o ano de <span th:text="${ano}"></span>.</p>
+            Nenhum log de auditoria encontrado para o ano de <span th:text="${ano}"></span>.
         </div>
 
-        <!-- Tabela de Logs do Ano -->
-        <div th:if="${logs != null and !logs.isEmpty()}" style="overflow-x: auto;">
-            <table class="tabela-dados" style="width: 100%; border-collapse: collapse;">
+        <div th:if="${logs != null and !logs.isEmpty()}" class="tabela-responsiva">
+            <table>
                 <thead>
                 <tr>
                     <th>Data/Hora</th>
@@ -40,12 +38,12 @@
                 </thead>
                 <tbody>
                 <tr th:each="log : ${logs}">
-                    <td th:text="${#temporals.format(log.dataHora, 'dd/MM/yyyy HH:mm:ss')}"></td>
-                    <td th:text="${log.usuarioCpf}"></td>
-                    <td th:text="${log.usuarioNome}"></td>
-                    <td th:text="${log.acao}"></td>
+                    <td class="td-nowrap" th:text="${#temporals.format(log.dataHora, 'dd/MM/yyyy HH:mm:ss')}"></td>
+                    <td class="td-nowrap" th:text="${log.usuarioCpf}"></td>
+                    <td class="font-weight-600" th:text="${log.usuarioNome}"></td>
+                    <td class="font-weight-600" th:text="${log.acao}"></td>
                     <td th:text="${log.entidade}"></td>
-                    <td th:text="${log.detalhes}"></td>
+                    <td style="text-align: left; font-family: monospace;" th:text="${log.detalhes}"></td>
                 </tr>
                 </tbody>
             </table>

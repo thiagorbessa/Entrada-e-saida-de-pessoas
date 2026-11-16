@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Backup de Internação</title>
+    <link rel="stylesheet" th:href="@{/css/estilo.css}" />
+</head>
+<body>
+
+<div th:replace="fragments/header :: app-header"></div>
+
+<main class="container-principal">
+    <div class="card-tabela">
+        <div class="titulo-secao" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+            <h1 style="margin: 0; border: 0; padding: 0;" th:text="'Backup de Internação — Ano: ' + ${ano}"></h1>
+            <a th:href="@{/auditoria/backup(ano=${ano})}" class="btn btn-limpar">
+                ← Voltar para Backups
+            </a>
+        </div>
+
+        <div th:if="${erro}" class="alert alert-erro">
+            <span th:text="${erro}"></span>
+        </div>
+
+        <!-- TABELA 1: PACIENTES INTERNADOS -->
+        <h2 class="titulo-secao" style="font-size: 1.15rem; color: var(--cor-marca); margin: 15px 0 12px 0;">
+            Pacientes Internados Arquivados
+        </h2>
+
+        <div class="tabela-responsiva tabela-pessoas-responsiva mb-25">
+            <table>
+                <thead>
+                <tr>
+                    <th>CPF</th>
+                    <th>Nome</th>
+                    <th>Telefone</th>
+                    <th>Unidade</th>
+                    <th>Andar</th>
+                    <th>Leito</th>
+                    <th>Hora Entrada</th>
+                    <th>Hora Saída</th>
+                    <th>Status</th>
+                    <th>Observação</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="pac : ${pacientes}" th:with="st=${pac.statusEfetivo.name()}">
+                    <td class="td-nowrap" data-label="CPF" th:text="${pac.cpf}"></td>
+                    <td class="td-nome font-weight-600" data-label="Nome" th:text="${pac.nome}"></td>
+                    <td class="td-nowrap" data-label="Telefone" th:text="${pac.telefone != null && !pac.telefone.isBlank() ? pac.telefone : '-'}"></td>
+                    <td data-label="Unidade" th:text="${pac.unidade}"></td>
+                    <td data-label="Andar" th:text="${pac.andar}"></td>
+                    <td data-label="Leito" th:text="${pac.leito}"></td>
+                    <td class="td-nowrap" data-label="Hora Entrada" th:text="${pac.horaEntrada != null ? #temporals.format(pac.horaEntrada, 'dd/MM/yyyy HH:mm') : '-'}"></td>
+                    <td class="td-nowrap" data-label="Hora Saída" th:text="${pac.horaSaida != null ? #temporals.format(pac.horaSaida, 'dd/MM/yyyy HH:mm') : '-'}"></td>
+                    <td data-label="Status">
+                        <span th:if="${st == 'INTERNADO'}" style="color: var(--cor-sucesso); font-weight: 600;">Internado</span>
+                        <span th:if="${st == 'ALTA'}" style="color: var(--cor-primaria-esc); font-weight: 600;">Alta</span>
+                        <span th:if="${st == 'OBITO'}" style="color: var(--cor-perigo); font-weight: 600;">Óbito</span>
+                    </td>
+                    <td class="td-obs" data-label="Observação" th:text="${pac.observacao != null && !pac.observacao.isBlank() ? pac.observacao : '-'}"></td>
+                </tr>
+                <tr th:if="${pacientes == null or #lists.isEmpty(pacientes)}">
+                    <td colspan="10" class="text-center" style="padding: 20px; color: #6c757d;">
+                        Nenhum paciente internado registrado neste backup.
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- TABELA 2: ACOMPANHANTES -->
+        <h2 class="titulo-secao" style="font-size: 1.15rem; color: var(--cor-marca); margin: 20px 0 12px 0;">
+            Acompanhantes Arquivados
+        </h2>
+
+        <div class="tabela-responsiva tabela-pessoas-responsiva">
+            <table>
+                <thead>
+                <tr>
+                    <th>CPF</th>
+                    <th>Nome</th>
+                    <th>Telefone</th>
+                    <th>Paciente Vinculado</th>
+                    <th>Unidade</th>
+                    <th>Andar</th>
+                    <th>Leito</th>
+                    <th>Hora Entrada</th>
+                    <th>Hora Saída</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="acomp : ${acompanhantes}">
+                    <td class="td-nowrap" data-label="CPF" th:text="${acomp.cpf}"></td>
+                    <td class="td-nome font-weight-600" data-label="Nome" th:text="${acomp.nome}"></td>
+                    <td class="td-nowrap" data-label="Telefone" th:text="${acomp.telefone != null && !acomp.telefone.isBlank() ? acomp.telefone : '-'}"></td>
+                    <td class="td-nome font-weight-600" data-label="Paciente Vinculado" th:text="${acomp.paciente != null ? acomp.paciente.nome : '-'}"></td>
+                    <td data-label="Unidade" th:text="${acomp.unidade}"></td>
+                    <td data-label="Andar" th:text="${acomp.andar}"></td>
+                    <td data-label="Leito" th:text="${acomp.leito}"></td>
+                    <td class="td-nowrap" data-label="Hora Entrada" th:text="${acomp.horaEntrada != null ? #temporals.format(acomp.horaEntrada, 'dd/MM/yyyy HH:mm') : '-'}"></td>
+                    <td class="td-nowrap" data-label="Hora Saída" th:text="${acomp.horaSaida != null ? #temporals.format(acomp.horaSaida, 'dd/MM/yyyy HH:mm') : '-'}"></td>
+                </tr>
+                <tr th:if="${acompanhantes == null or #lists.isEmpty(acompanhantes)}">
+                    <td colspan="9" class="text-center" style="padding: 20px; color: #6c757d;">
+                        Nenhum acompanhante registrado neste backup.
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</main>
+</body>
+</html>

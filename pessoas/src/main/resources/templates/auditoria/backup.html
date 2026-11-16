@@ -19,25 +19,29 @@
             <p style="margin: 0;" th:text="${sucesso}"></p>
         </div>
         <div th:if="${erro}" class="alert alert-erro">
-            <p th:text="${erro}"></p>
+            <p style="margin: 0;" th:text="${erro}"></p>
         </div>
     </div>
 
     <!-- ===================== CONSULTA POR ANO ===================== -->
     <div class="card-welcome" style="max-width: 900px; margin: 30px auto;">
-        <h1>Consulta de Logs Arquivados (Backup Anual)</h1>
-        <p>Digite o ano correspondente ao backup que deseja consultar (Ex: 2025). Os dados exibidos são estritos de leitura.</p>
+        <h1>Consulta de Dados Arquivados (Backup Anual)</h1>
+        <p>Digite o ano correspondente ao backup que deseja consultar (Ex: 2025). Os dados exibidos são estritamente de leitura.</p>
 
         <!-- Formulário de Pesquisa por Ano -->
-        <form th:action="@{/auditoria/backup}" method="get" style="display: flex; gap: 10px; margin-top: 20px; margin-bottom: 15px;">
+        <form th:action="@{/auditoria/backup}" method="get" style="display: flex; gap: 10px; margin-top: 20px; margin-bottom: 15px; flex-wrap: wrap;">
             <input type="number" name="ano" th:value="${anoPesquisado}" placeholder="Digite o ano (Ex: 2025)" required class="form-control" style="max-width: 250px;" />
             <button type="submit" class="btn btn-salvar">Pesquisar Backup</button>
         </form>
 
         <!-- Botões de Acesso aos Dados do Ano Pesquisado (Aparecem automaticamente após pesquisar um ano) -->
-        <div th:if="${anoPesquisado != null}" style="margin-bottom: 25px; display: flex; gap: 10px; flex-wrap: wrap;">
+        <div th:if="${anoPesquisado != null}" style="margin-bottom: 10px; display: flex; gap: 10px; flex-wrap: wrap;">
             <a th:href="@{/auditoria/backup/pessoas(ano=${anoPesquisado})}" class="btn btn-consulta">
                 👥 Ver Pessoas do Ano de <span th:text="${anoPesquisado}"></span>
+            </a>
+
+            <a th:href="@{/auditoria/backup/internacao(ano=${anoPesquisado})}" class="btn btn-consulta">
+                🏥 Ver Internação do Ano de <span th:text="${anoPesquisado}"></span>
             </a>
 
             <a th:href="@{/auditoria/backup/logs-ano(ano=${anoPesquisado})}" class="btn btn-consulta">
@@ -50,9 +54,9 @@
     <div class="card-welcome" style="max-width: 900px; margin: 30px auto;">
         <h2>Arquivar dados atuais no backup do ano</h2>
         <p>
-            Copia as visitas já finalizadas do ano escolhido, as pessoas e os logs de auditoria para as tabelas
-            <strong>registros_ANO</strong>, <strong>pessoas_ANO</strong> e <strong>auditoria_logs_ANO</strong>.
-            Se as tabelas do ano já existirem, os dados são acrescentados (sem duplicar). Visitas em aberto nunca são copiadas nem apagadas.
+            Copia as visitas já finalizadas do ano escolhido, as pessoas, os pacientes internados, os acompanhantes finalizados e os logs de auditoria para as tabelas
+            <strong>registros_ANO</strong>, <strong>pessoas_ANO</strong>, <strong>pacientes_internados_ANO</strong>, <strong>acompanhantes_ANO</strong> e <strong>logs_ANO</strong>.
+            Se as tabelas do ano já existirem, os dados são acrescentados (sem duplicar). Visitas e acompanhantes em aberto nunca são apagados.
         </p>
 
         <!-- Backup e MANTER os dados -->
@@ -64,13 +68,12 @@
                 💾 Fazer backup e manter os dados
             </button>
         </form>
-        ...
 
         <hr style="margin: 25px 0; border: none; border-top: 1px solid #e2e5ea;" />
 
         <!-- Backup e APAGAR os dados -->
         <form th:action="@{/auditoria/backup/arquivar}" method="post"
-              onsubmit="return confirm('Os registros do ano e as pessoas arquivadas serão REMOVIDOS do sistema. Deseja continuar?');"
+              onsubmit="return confirm('Os registros finalizados do ano (visitas, internações encerradas e acompanhantes) serão REMOVIDOS do sistema após confirmação no backup. Deseja continuar?');"
               style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
             <input type="number" id="ano-apagar" name="ano" th:value="${anoAtual}" min="2000" max="2100" required
                    class="form-control" style="max-width: 140px;" />
@@ -81,8 +84,8 @@
             </button>
         </form>
         <p style="color: #666; font-size: 0.85rem; margin-top: 8px;">
-            Só é removido o que foi confirmado dentro do backup. Pessoas só são removidas se tiveram visitas arquivadas
-            e não têm mais nenhuma visita no sistema.
+            Só é removido o que foi confirmado dentro do backup. Pessoas e pacientes internados só são removidos se estiverem encerrados no ano
+            e não tiverem nenhum vínculo ativo no sistema.
         </p>
         <script>
             (function () {
@@ -100,8 +103,8 @@
         <h2>Importar backup (.sql)</h2>
         <p>
             Restaura um arquivo gerado pelos scripts <strong>backup-banco.sh</strong> / <strong>backup-banco.bat</strong>.
-            <strong>Atenção:</strong> a importação <strong>substitui todas as tabelas</strong> do banco pelas do arquivo
-            (inclusive usuários e logs). Se o arquivo falhar no meio, o banco pode ficar parcialmente restaurado,
+            <strong>Atenção:</strong> a importação <strong>substitui as tabelas</strong> do banco pelas do arquivo
+            (preservando apenas o histórico de logs atual). Se o arquivo falhar no meio, o banco pode ficar parcialmente restaurado,
             então gere um backup novo antes de importar. Tamanho máximo: 50 MB.
         </p>
 

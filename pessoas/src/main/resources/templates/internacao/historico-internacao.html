@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Histórico de Internação</title>
+    <link rel="stylesheet" th:href="@{/css/estilo.css}" />
+</head>
+
+<body>
+<header>
+    <nav>
+        <ul class="nav-links">
+            <li><a th:href="@{/}"> Início </a></li>
+
+            <li sec:authorize="isAuthenticated()">
+                <a th:href="@{/pessoas}"> Fluxo de Entrada e Saída </a>
+            </li>
+
+            <li sec:authorize="isAuthenticated()">
+                <a th:href="@{/internacao}"> Internação </a>
+            </li>
+
+            <li sec:authorize="hasAnyRole('SISTEMA', 'GERAL')">
+                <a th:href="@{/usuarios}"> Usuários </a>
+            </li>
+
+            <li sec:authorize="hasRole('ROLE_GERAL')">
+                <a th:href="@{/auditoria/logs}">Logs de Auditoria</a>
+            </li>
+
+            <li sec:authorize="hasRole('ROLE_GERAL')">
+                <a th:href="@{/auditoria/backup}">Backups</a>
+            </li>
+        </ul>
+
+        <div class="nav-usuario" sec:authorize="isAuthenticated()"
+             th:with="userObj=${usuarioLogado != null ? usuarioLogado : @usuarioRepository.findByCpf(#authentication.name).orElse(null)}">
+            <a th:href="@{/}" class="link-usuario-logado" title="Ir para a página inicial">
+                👤 <span th:text="${userObj != null ? userObj.nomeCompleto : #authentication.name}">Usuário</span>
+            </a>
+            <form th:action="@{/logout}" method="post" class="form-logout-inline">
+                <button type="submit" class="btn-logout-link">Sair</button>
+            </form>
+        </div>
+    </nav>
+</header>
+
+<main class="container-principal">
+    <div style="margin-bottom: 18px;">
+        <h2 style="color: #2c3e50; margin-bottom: 12px;"
+            th:text="'Histórico de ' + ${pessoa.nome} + ' (CPF: ' + ${pessoa.cpf} + (${pessoa.telefone != null && !pessoa.telefone.isBlank()} ? ' | Tel: ' + ${pessoa.telefone} : '') + ')'">
+            Histórico
+        </h2>
+
+        <div style="background: #f8f9fa; border-left: 4px solid #6c757d; padding: 10px 14px; color: #495057; font-size: 0.92rem;">
+            <strong>Cadastro/Última edição por:</strong>
+            <span th:text="${operadorCadastro}">Administrador Geral</span>
+        </div>
+    </div>
+
+    <div class="card-tabela">
+        <div class="tabela-responsiva">
+            <table>
+                <thead>
+                <tr>
+                    <th style="text-align: center;">Data / Hora</th>
+                    <th style="text-align: center;">Movimentação</th>
+                    <th style="text-align: center;">Unidade</th>
+                    <th style="text-align: center;">Andar</th>
+                    <th style="text-align: center;">Leito</th>
+                    <th style="text-align: center;">Paciente</th>
+                    <th style="text-align: center;">Detalhes</th>
+                    <th style="text-align: center;">Operador Responsável</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="log : ${logs}">
+                    <td class="td-nowrap" style="text-align: center;"
+                        th:text="${log.dataHora != null ? #temporals.format(log.dataHora, 'dd/MM/yyyy HH:mm') : '-'}"></td>
+
+                    <td style="text-align: center; font-weight: 600;">
+                        <span th:if="${#strings.startsWith(log.acao, 'ENTRADA')}" style="color: #2e7d32;" th:text="${log.acao}"></span>
+                        <span th:if="${#strings.startsWith(log.acao, 'SAIDA')}" style="color: #c9302c;" th:text="${log.acao}"></span>
+                        <span th:unless="${#strings.startsWith(log.acao, 'ENTRADA') || #strings.startsWith(log.acao, 'SAIDA')}"
+                              th:text="${log.acao}"></span>
+                    </td>
+
+                    <td style="text-align: center;" th:text="${pessoa.unidade}"></td>
+                    <td style="text-align: center;" th:text="${pessoa.andar}"></td>
+                    <td style="text-align: center;" th:text="${pessoa.leito}"></td>
+                    <td style="text-align: center;" th:text="${pacienteVinculado}"></td>
+                    <td style="text-align: center; font-size: 0.9rem;" th:text="${log.detalhes}"></td>
+                    <td style="text-align: center; font-style: italic; font-size: 0.9rem; color: #495057;"
+                        th:text="${log.usuarioNome}"></td>
+                </tr>
+
+                <!-- Fallback para registros antigos criados antes do vínculo com LogAuditoria -->
+                <tr th:if="${(logs == null || #lists.isEmpty(logs)) && pessoa.horaEntrada != null}">
+                    <td class="td-nowrap" style="text-align: center;"
+                        th:text="${#temporals.format(pessoa.horaEntrada, 'dd/MM/yyyy HH:mm')}"></td>
+                    <td style="text-align: center; font-weight: 600;">
+                        <span th:text="${pessoa.horaSaida == null ? 'ENTRADA (Em aberto)' : 'SAÍDA (' + #temporals.format(pessoa.horaSaida, 'dd/MM/yyyy HH:mm') + ')'}"></span>
+                    </td>
+                    <td style="text-align: center;" th:text="${pessoa.unidade}"></td>
+                    <td style="text-align: center;" th:text="${pessoa.andar}"></td>
+                    <td style="text-align: center;" th:text="${pessoa.leito}"></td>
+                    <td style="text-align: center;" th:text="${pacienteVinculado}"></td>
+                    <td style="text-align: center;">Registro atual</td>
+                    <td style="text-align: center; font-style: italic;" th:text="${operadorCadastro}"></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div style="margin-top: 20px;">
+            <a th:href="@{/internacao}" class="btn"
+               style="background-color: #6c757d; color: #fff; text-decoration: none; display: inline-block; padding: 10px 18px; border-radius: 5px; font-weight: 600;">
+                &larr; Voltar para a listagem
+            </a>
+        </div>
+    </div>
+</main>
+</body>
+</html>

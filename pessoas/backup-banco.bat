@@ -1,10 +1,11 @@
 @echo off
 REM Backup fisico COMPLETO do MySQL que roda em container Docker (Windows).
 REM Gera dois arquivos .sql em .\backups :
-REM   1) backup_<banco>_<data>.sql            -> o banco da aplicacao (todas as tabelas, inclusive
-REM                                              logs e tabelas anuais). Restaura pela tela "Importar backup".
+REM   1) backup_<banco>_<data>.sql            -> o banco da aplicacao (todas as tabelas: pessoas, registros,
+REM                                             pacientes_internados, acompanhantes, usuarios, log_auditoria e tabelas anuais).
+REM                                             Restaura pela tela "Importar backup".
 REM   2) backup_servidor_completo_<data>.sql  -> o servidor inteiro (todos os bancos + usuarios/permissoes
-REM                                              do MySQL). Para desastre; restaure por linha de comando.
+REM                                             do MySQL). Para desastre; restaure por linha de comando.
 REM
 REM Uso: de dois cliques ou rode backup-banco.bat
 REM Agendar: Agendador de Tarefas do Windows apontando para este arquivo.
@@ -24,8 +25,9 @@ REM DIAS_RETENCAO: apaga backups com mais de N dias; 0 = nunca apagar
 REM SERVIDOR_COMPLETO: 1 = gera tambem o dump de todos os bancos do servidor; 0 = so o banco da aplicacao
 REM ======================================================
 
-REM Banco da aplicacao: sem --routines/--events (geram DELIMITER, que a tela de importar nao entende).
-set "OPTS=--single-transaction --no-tablespaces --default-character-set=utf8mb4 --hex-blob"
+REM Banco da aplicacao: sem --routines/--events/--triggers (evita DELIMITER, que a tela de importar bloqueia).
+set "OPTS=--single-transaction --no-tablespaces --default-character-set=utf8mb4 --hex-blob --skip-triggers"
+set "OPTS_SERVIDOR=--single-transaction --no-tablespaces --default-character-set=utf8mb4 --hex-blob"
 
 if not exist "%DESTINO%" mkdir "%DESTINO%"
 
@@ -53,7 +55,7 @@ if errorlevel 1 (
     exit /b 1
 )
 
-REM Conferencia: toda tabela do banco precisa ter um CREATE TABLE no arquivo.
+REM Conferencia 1: toda tabela do banco precisa ter um CREATE TABLE no arquivo.
 set "N_TAB="
 set "N_DUMP="
 for /f "usebackq delims=" %%n in (`docker exec -e "MYSQL_PWD=%DB_PASS%" %CONTAINER% mysql -u %DB_USER% -N -B -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='%DB_NAME%'"`) do set "N_TAB=%%n"
@@ -64,14 +66,25 @@ if defined N_TAB if not "%N_TAB%"=="%N_DUMP%" (
     del "%ARQ%" 2>nul
     exit /b 1
 )
-echo Conferido: %N_DUMP% tabelas no arquivo.
+
+REM Conferencia 2: valida presenca das tabelas principais (incluindo Internacao).
+for %%T in (pessoas registros pacientes_internados acompanhantes usuarios log_auditoria) do (
+    findstr /C:"CREATE TABLE `%%T`" "%ARQ%" >nul
+    if errorlevel 1 (
+        echo ERRO: tabela obrigatoria "%%T" nao encontrada no backup. Arquivo descartado.
+        del "%ARQ%" 2>nul
+        exit /b 1
+    )
+)
+
+echo Conferido: %N_DUMP% tabelas no arquivo (incluindo pacientes_internados e acompanhantes).
 
 REM ---------- 2) Servidor completo ----------
 set "NOME2="
 if not "%SERVIDOR_COMPLETO%"=="1" goto apos_servidor
 if not exist "%DESTINO2%" mkdir "%DESTINO2%"
 echo [2/2] Gerando backup de TODOS os bancos do servidor em: %ARQ2%
-docker exec -e "MYSQL_PWD=%DB_PASS%" %CONTAINER% mysqldump -u %DB_USER% %OPTS% --routines --triggers --events --all-databases > "%ARQ2%"
+docker exec -e "MYSQL_PWD=%DB_PASS%" %CONTAINER% mysqldump -u %DB_USER% %OPTS_SERVIDOR% --routines --triggers --events --all-databases > "%ARQ2%"
 if errorlevel 1 (
     echo AVISO: o dump do servidor completo falhou; o backup do banco da aplicacao foi mantido.
     del "%ARQ2%" 2>nul
@@ -93,11 +106,9 @@ if not "%DIAS_RETENCAO%"=="0" (
 )
 
 REM ---------- Registra na tela "Logs de Auditoria" ----------
-REM Descobre sozinho a tabela de logs (a que tem a coluna usuario_cpf e nao termina em _AAAA).
-REM Falha aqui NAO invalida o backup: apenas avisa.
 for %%A in ("%ARQ%") do set "TAMANHO=%%~zA"
 for %%A in ("%ARQ%") do set "NOME=%%~nxA"
-set "DET=Backup fisico gerado: %NOME% - %TAMANHO% bytes - %N_DUMP% tabelas."
+set "DET=Backup fisico gerado: %NOME% - %TAMANHO% bytes - %N_DUMP% tabelas (pessoas, registros, pacientes_internados, acompanhantes, usuarios, logs)."
 if defined NOME2 set "DET=%DET% Servidor completo: %NOME2%."
 
 set "SQLTMP=%TEMP%\log_backup_%TS%.sql"

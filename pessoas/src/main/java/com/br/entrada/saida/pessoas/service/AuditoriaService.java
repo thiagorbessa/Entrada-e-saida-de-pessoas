@@ -1,8 +1,11 @@
 package com.br.entrada.saida.pessoas.service;
 
+import com.br.entrada.saida.pessoas.model.Acompanhante;
 import com.br.entrada.saida.pessoas.model.LogAuditoria;
+import com.br.entrada.saida.pessoas.model.PacienteInternado;
 import com.br.entrada.saida.pessoas.model.Pessoa;
 import com.br.entrada.saida.pessoas.model.Registro;
+import com.br.entrada.saida.pessoas.model.StatusInternacao;
 import com.br.entrada.saida.pessoas.model.Unidade;
 import com.br.entrada.saida.pessoas.model.Usuario;
 import com.br.entrada.saida.pessoas.repository.LogAuditoriaRepository;
@@ -29,11 +32,7 @@ import java.util.stream.Collectors;
 public class AuditoriaService {
 
     private final LogAuditoriaRepository logRepository;
-    private final JdbcTemplate jdbcTemplate; // Injeção necessária para consultar as tabelas dinâmicas de backup
-
-    // ==========================================
-    // MÉTODOS ORIGINAIS (SEM ALTERAÇÃO)
-    // ==========================================
+    private final JdbcTemplate jdbcTemplate;
 
     @Transactional
     public void registrar(Usuario usuario, String acao, String entidade, UUID entidadeId, String descricao, String detalhes) {
@@ -107,15 +106,12 @@ public class AuditoriaService {
         return logRepository.findAllByOrderByDataHoraDesc();
     }
 
-    // Listagem paginada para os logs
     public Page<LogAuditoria> listarTodosPaginados(Pageable pageable) {
         return logRepository.findAllByOrderByDataHoraDesc(pageable);
     }
 
     // ==========================================
-    // HELPERS NOVOS DE LEITURA DO ResultSet
-    // Cada coluna candidata tem seu próprio try/catch: no MySQL Connector/J,
-    // ler uma coluna inexistente LANÇA exceção (não devolve null).
+    // HELPERS DE LEITURA DO ResultSet
     // ==========================================
 
     private LocalDateTime lerDataHora(ResultSet rs, String... colunas) {
@@ -127,7 +123,6 @@ public class AuditoriaService {
                 if (v instanceof LocalDateTime l) return l;
                 return LocalDateTime.parse(v.toString().trim().replace(" ", "T"));
             } catch (Exception ignored) {
-                // coluna inexistente ou formato inválido: tenta a próxima
             }
         }
         return null;
@@ -139,13 +134,11 @@ public class AuditoriaService {
                 String v = rs.getString(c);
                 if (v != null) return v;
             } catch (Exception ignored) {
-                // coluna inexistente: tenta a próxima
             }
         }
         return null;
     }
 
-    // Lê UUID tanto de coluna CHAR(36) quanto BINARY(16)
     private UUID lerUuid(ResultSet rs, String... colunas) {
         for (String c : colunas) {
             try {
@@ -157,7 +150,6 @@ public class AuditoriaService {
                 }
                 return UUID.fromString(new String(bytes, StandardCharsets.UTF_8).trim());
             } catch (Exception ignored) {
-                // coluna inexistente ou valor inválido: tenta a próxima
             }
         }
         return null;
@@ -174,11 +166,10 @@ public class AuditoriaService {
     }
 
     // ==========================================
-    // BACKUP DE LOGS (ALTERADO)
+    // BACKUP DE LOGS
     // ==========================================
 
     public List<LogAuditoria> listarLogsPorAnoBackup(int ano) {
-        // Tenta buscar em 'logs_' + ano, e se falhar tenta 'log_auditoria_' + ano
         String[] possiveisTabelas = {"logs_" + ano, "log_auditoria_" + ano, "auditoria_logs_" + ano};
 
         for (String nomeTabela : possiveisTabelas) {
@@ -206,7 +197,7 @@ public class AuditoriaService {
     }
 
     // ==========================================
-    // MÉTODOS DE BACKUP PARA PESSOAS E HISTÓRICO (ALTERADOS)
+    // BACKUP DE PESSOAS E HISTÓRICO
     // ==========================================
 
     public List<Pessoa> listarPessoasPorAnoBackup(int ano) {
@@ -223,8 +214,6 @@ public class AuditoriaService {
 
     public Pessoa buscarPessoaPorIdNoBackup(UUID pessoaId, int ano) {
         String nomeTabela = "pessoas_" + ano;
-
-        // Funciona para id CHAR(36) (texto) e BINARY(16) (bytes): só uma das duas condições casa.
         String sql = "SELECT * FROM " + nomeTabela +
                 " WHERE id = ? OR id = UNHEX(REPLACE(?, '-', '')) LIMIT 1";
         try {
@@ -237,7 +226,6 @@ public class AuditoriaService {
             System.err.println("Erro ao buscar pessoa no backup " + ano + ": " + e.getMessage());
         }
 
-        // Não devolve mais "a primeira pessoa da tabela": isso exibia dados de outra pessoa.
         Pessoa pessoaFallback = new Pessoa();
         pessoaFallback.setId(pessoaId);
         pessoaFallback.setNome("Pessoa Arquivada");
@@ -263,9 +251,6 @@ public class AuditoriaService {
 
     public List<Registro> listarRegistrosPorPessoaEAnodeBackup(UUID pessoaId, int ano) {
         String nomeTabela = "registros_" + ano;
-
-        // WHERE novo: filtra pela pessoa (antes devolvia os registros de TODAS as pessoas).
-        // As duas condições cobrem pessoa_id CHAR(36) e BINARY(16).
         String sql = "SELECT r.*, ue.nome_completo AS nome_entrada, us.nome_completo AS nome_saida " +
                 "FROM " + nomeTabela + " r " +
                 "LEFT JOIN usuarios ue ON r.usuario_entrada_id = ue.id " +
@@ -304,6 +289,79 @@ public class AuditoriaService {
             }, idStr, idStr);
         } catch (Exception e) {
             System.err.println("Erro ao listar registros de backup para o ano " + ano + ": " + e.getMessage());
+            return new ArrayList<>();
+        }
+    }
+
+    // ==========================================
+    // BACKUP DE INTERNAÇÃO (PACIENTES E ACOMPANHANTES)
+    // ==========================================
+
+    public List<PacienteInternado> listarPacientesInternadosPorAnoBackup(int ano) {
+        String nomeTabela = "pacientes_internados_" + ano;
+        String sql = "SELECT * FROM " + nomeTabela + " ORDER BY nome ASC";
+
+        try {
+            return jdbcTemplate.query(sql, (rs, rowNum) -> {
+                PacienteInternado pac = new PacienteInternado();
+                pac.setId(lerUuid(rs, "id", "ID"));
+                pac.setCpf(lerString(rs, "cpf"));
+                pac.setNome(lerString(rs, "nome"));
+                pac.setTelefone(lerString(rs, "telefone"));
+                pac.setUnidade(lerUnidade(rs));
+                pac.setAndar(lerString(rs, "andar"));
+                pac.setLeito(lerString(rs, "leito"));
+                pac.setObservacao(lerString(rs, "observacao"));
+                pac.setHoraEntrada(lerDataHora(rs, "hora_entrada", "horaEntrada"));
+                pac.setHoraSaida(lerDataHora(rs, "hora_saida", "horaSaida"));
+
+                String statusStr = lerString(rs, "status");
+                if (statusStr != null && !statusStr.isBlank()) {
+                    try {
+                        pac.setStatus(StatusInternacao.valueOf(statusStr.trim()));
+                    } catch (Exception ignored) {
+                    }
+                }
+                return pac;
+            });
+        } catch (Exception e) {
+            System.err.println("Erro ao listar pacientes internados do backup para o ano " + ano + ": " + e.getMessage());
+            return new ArrayList<>();
+        }
+    }
+
+    public List<Acompanhante> listarAcompanhantesPorAnoBackup(int ano) {
+        String tAcomp = "acompanhantes_" + ano;
+        String tPac = "pacientes_internados_" + ano;
+
+        String sql = "SELECT a.*, p.nome AS paciente_nome " +
+                "FROM " + tAcomp + " a " +
+                "LEFT JOIN " + tPac + " p ON a.paciente_id = p.id " +
+                "ORDER BY a.hora_entrada DESC";
+
+        try {
+            return jdbcTemplate.query(sql, (rs, rowNum) -> {
+                Acompanhante acomp = new Acompanhante();
+                acomp.setId(lerUuid(rs, "id", "ID"));
+                acomp.setCpf(lerString(rs, "cpf"));
+                acomp.setNome(lerString(rs, "nome"));
+                acomp.setTelefone(lerString(rs, "telefone"));
+                acomp.setUnidade(lerUnidade(rs));
+                acomp.setAndar(lerString(rs, "andar"));
+                acomp.setLeito(lerString(rs, "leito"));
+                acomp.setHoraEntrada(lerDataHora(rs, "hora_entrada", "horaEntrada"));
+                acomp.setHoraSaida(lerDataHora(rs, "hora_saida", "horaSaida"));
+
+                String pacNome = lerString(rs, "paciente_nome");
+                if (pacNome != null && !pacNome.isBlank()) {
+                    PacienteInternado pac = new PacienteInternado();
+                    pac.setNome(pacNome);
+                    acomp.setPaciente(pac);
+                }
+                return acomp;
+            });
+        } catch (Exception e) {
+            System.err.println("Erro ao listar acompanhantes do backup para o ano " + ano + ": " + e.getMessage());
             return new ArrayList<>();
         }
     }

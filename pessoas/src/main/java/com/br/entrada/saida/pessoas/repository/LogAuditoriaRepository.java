@@ -18,4 +18,5 @@ public interface LogAuditoriaRepository extends JpaRepository<LogAuditoria, UUID
 
     List<LogAuditoria> findByUsuarioCpfOrderByDataHoraDesc(String usuarioCpf);
     List<LogAuditoria> findByEntidadeIdOrderByDataHoraDesc(UUID entidadeId);
+    List<LogAuditoria> findByEntidadeIdAndEntidadeOrderByDataHoraDesc(UUID entidadeId, String entidade);
 }

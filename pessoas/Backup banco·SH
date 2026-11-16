@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# Backup fisico COMPLETO do MySQL que roda em container Docker.
+# Backup fisico COMPLETO do MySQL que roda em container Docker (Linux / macOS).
 # Gera dois arquivos .sql em ./backups :
-#   1) backup_<banco>_<data>.sql            -> o banco da aplicacao (todas as tabelas, inclusive logs e
-#                                              tabelas anuais). Restaura pela tela "Importar backup".
+#   1) backup_<banco>_<data>.sql            -> o banco da aplicacao (todas as tabelas: pessoas, registros,
+#                                             pacientes_internados, acompanhantes, usuarios, log_auditoria e tabelas anuais).
+#                                             Restaura pela tela "Importar backup".
 #   2) backup_servidor_completo_<data>.sql  -> o servidor inteiro (todos os bancos + usuarios/permissoes
-#                                              do MySQL). Para desastre; restaure por linha de comando:
+#                                             do MySQL). Para desastre; restaure por linha de comando:
 #        docker exec -i -e MYSQL_PWD=senha <container> mysql -u root < arquivo.sql
 #
 # Uso:    ./backup-banco.sh
@@ -24,8 +25,10 @@ DIAS_RETENCAO=30            # apaga backups com mais de N dias; 0 = nunca apagar
 SERVIDOR_COMPLETO=1         # 1 = gera tambem o dump de todos os bancos do servidor; 0 = so o da aplicacao
 # ======================================================
 
-# Banco da aplicacao: sem --routines/--events (geram DELIMITER, que a tela de importar nao entende).
-OPTS=(--single-transaction --no-tablespaces --default-character-set=utf8mb4 --hex-blob)
+# Banco da aplicacao: sem --routines/--events/--triggers (evita DELIMITER, que a tela de importar bloqueia).
+OPTS=(--single-transaction --no-tablespaces --default-character-set=utf8mb4 --hex-blob --skip-triggers)
+OPTS_SERVIDOR=(--single-transaction --no-tablespaces --default-character-set=utf8mb4 --hex-blob)
+
 TS="$(date +%Y-%m-%d_%H-%M-%S)"
 ARQ="$DESTINO/backup_${DB_NAME}_${TS}.sql"
 DESTINO2="$DESTINO/servidor-completo-NAO-IMPORTAR-PELA-TELA"
@@ -52,7 +55,7 @@ if ! tail -n 1 "$ARQ" | grep -q "Dump completed"; then
     exit 1
 fi
 
-# Conferencia: toda tabela do banco precisa ter um CREATE TABLE no arquivo.
+# Conferencia 1: toda tabela do banco precisa ter um CREATE TABLE no arquivo.
 N_TAB="$(docker exec -e MYSQL_PWD="$DB_PASS" "$CONTAINER" mysql -u "$DB_USER" -N -B \
         -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='${DB_NAME}'" 2>/dev/null || true)"
 N_DUMP="$(grep -c '^CREATE TABLE' "$ARQ" || true)"
@@ -63,14 +66,24 @@ elif [ "$N_TAB" != "$N_DUMP" ]; then
     rm -f "$ARQ"
     exit 1
 fi
-echo "Conferido: $N_DUMP tabelas no arquivo."
+
+# Conferencia 2: valida presenca das tabelas principais (incluindo Internacao).
+for TABELA in pessoas registros pacientes_internados acompanhantes usuarios log_auditoria; do
+    if ! grep -q "CREATE TABLE \`${TABELA}\`" "$ARQ"; then
+        echo "ERRO: tabela obrigatoria '${TABELA}' nao encontrada no backup. Arquivo descartado." >&2
+        rm -f "$ARQ"
+        exit 1
+    fi
+done
+
+echo "Conferido: $N_DUMP tabelas no arquivo (incluindo pacientes_internados e acompanhantes)."
 
 # ---------- 2) Servidor completo ----------
 NOME2=""
 if [ "$SERVIDOR_COMPLETO" = "1" ]; then
     echo "[$(date '+%F %T')] [2/2] Gerando backup de TODOS os bancos do servidor em: $ARQ2"
     if ! docker exec -e MYSQL_PWD="$DB_PASS" "$CONTAINER" \
-            mysqldump -u "$DB_USER" "${OPTS[@]}" --routines --triggers --events --all-databases > "$ARQ2"; then
+            mysqldump -u "$DB_USER" "${OPTS_SERVIDOR[@]}" --routines --triggers --events --all-databases > "$ARQ2"; then
         echo "AVISO: o dump do servidor completo falhou; o backup do banco da aplicacao foi mantido." >&2
         rm -f "$ARQ2"
     elif ! tail -n 1 "$ARQ2" | grep -q "Dump completed"; then
@@ -83,18 +96,16 @@ fi
 
 # ---------- Retencao ----------
 if [ "$DIAS_RETENCAO" -gt 0 ]; then
-    find "$DESTINO" -name "backup_${DB_NAME}_*.sql" -mtime +"$DIAS_RETENCAO" -delete
-    [ -d "$DESTINO2" ] && find "$DESTINO2" -name "backup_servidor_completo_*.sql" -mtime +"$DIAS_RETENCAO" -delete
+    find "$DESTINO" -maxdepth 1 -name "backup_${DB_NAME}_*.sql" -mtime +"$DIAS_RETENCAO" -delete
+    [ -d "$DESTINO2" ] && find "$DESTINO2" -maxdepth 1 -name "backup_servidor_completo_*.sql" -mtime +"$DIAS_RETENCAO" -delete
 fi
 
 TAMANHO="$(du -h "$ARQ" | cut -f1)"
 NOME="$(basename "$ARQ")"
-DET="Backup fisico gerado: $NOME - $TAMANHO - $N_DUMP tabelas."
+DET="Backup fisico gerado: $NOME - $TAMANHO - $N_DUMP tabelas (pessoas, registros, pacientes_internados, acompanhantes, usuarios, logs)."
 [ -n "$NOME2" ] && DET="$DET Servidor completo: $NOME2."
 
 # ---- Registra o backup na tela "Logs de Auditoria" do sistema ----
-# Descobre sozinho a tabela de logs (a que tem a coluna usuario_cpf e nao termina em _AAAA).
-# Falha aqui NAO invalida o backup: apenas avisa.
 if ! {
     printf "SET @det := '%s';\n" "$DET"
     cat <<'SQL'

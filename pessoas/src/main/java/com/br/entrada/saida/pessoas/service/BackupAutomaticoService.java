@@ -2,7 +2,6 @@ package com.br.entrada.saida.pessoas.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -13,38 +12,21 @@ import java.time.LocalDate;
 @RequiredArgsConstructor
 public class BackupAutomaticoService {
 
-    private final JdbcTemplate jdbcTemplate;
+    private final BackupService backupService;
 
     // Roda todo dia 1 de janeiro à 01:00 AM
     @Scheduled(cron = "0 0 1 1 1 ?")
     public void executarBackupAnual() {
-        int anoAtual = LocalDate.now().getYear();
-        int anoAnterior = anoAtual - 1;
-
-        String nomeTabelaBackup = "log_auditoria_" + anoAnterior;
-        log.info("Iniciando o backup automático para a tabela: {}", nomeTabelaBackup);
+        int anoAnterior = LocalDate.now().getYear() - 1;
+        log.info("Iniciando o backup automático anual para o ano: {}", anoAnterior);
 
         try {
-            // 1. Cria a tabela de backup com os dados do ano anterior
-            String sqlCreate = String.format("""
-                CREATE TABLE IF NOT EXISTS %s AS 
-                SELECT * FROM log_auditoria 
-                WHERE YEAR(dataHora) = %d
-            """, nomeTabelaBackup, anoAnterior);
-
-            jdbcTemplate.execute(sqlCreate);
-
-            // 2. Remove os dados antigos da tabela principal para manter a performance
-            String sqlDelete = String.format("""
-                DELETE FROM log_auditoria 
-                WHERE YEAR(dataHora) = %d
-            """, anoAnterior);
-
-            jdbcTemplate.update(sqlDelete);
-
-            log.info("Backup automático do ano {} concluído com sucesso!", anoAnterior);
+            BackupService.ResultadoArquivamento r = backupService.arquivarAno(anoAnterior, false);
+            log.info("Backup automático de {} concluído! Registros: {}, Pessoas: {}, Pacientes Internados: {}, Acompanhantes: {}, Logs: {}",
+                    anoAnterior, r.registrosCopiados(), r.pessoasNoBackup(),
+                    r.pacientesInternadosNoBackup(), r.acompanhantesCopiados(), r.logsCopiados());
         } catch (Exception e) {
-            log.error("Erro ao executar o backup automático: {}", e.getMessage(), e);
+            log.error("Erro ao executar o backup automático do ano {}: {}", anoAnterior, e.getMessage(), e);
         }
     }
 }

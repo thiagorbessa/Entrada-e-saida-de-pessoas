@@ -151,8 +151,27 @@ public class AuditoriaController {
         return "auditoria/logs-backup";
     }
 
+    @GetMapping("/backup/internacao")
+    public String listarInternacaoBackup(@RequestParam("ano") int ano, Model model, Principal principal) {
+        Usuario usuario = obterUsuarioLogado(principal);
+        if (usuario == null || !"ROLE_GERAL".equals(usuario.getPerfil())) {
+            return "redirect:/pessoas";
+        }
+
+        try {
+            model.addAttribute("pacientes", auditoriaService.listarPacientesInternadosPorAnoBackup(ano));
+            model.addAttribute("acompanhantes", auditoriaService.listarAcompanhantesPorAnoBackup(ano));
+            model.addAttribute("ano", ano);
+        } catch (Exception e) {
+            model.addAttribute("erro", "Não existem tabelas de backup de internação para o ano de " + ano + ".");
+        }
+
+        model.addAttribute("usuarioLogado", usuario);
+        return "auditoria/listar-internacao-backup";
+    }
+
     // ==========================================================
-    // NOVO: arquivar o ano (backup e manter / backup e apagar)
+    // Arquivar o ano (backup e manter / backup e apagar)
     // ==========================================================
 
     @PostMapping("/backup/arquivar")
@@ -183,11 +202,15 @@ public class AuditoriaController {
 
             String mensagem = "Backup do ano " + ano + " concluído: "
                     + r.registrosCopiados() + " registros novos copiados para registros_" + ano + ", "
-                    + r.pessoasNoBackup() + " pessoas atualizadas em pessoas_" + ano + " e "
+                    + r.pessoasNoBackup() + " pessoas atualizadas em pessoas_" + ano + ", "
+                    + r.pacientesInternadosNoBackup() + " pacientes internados atualizados em pacientes_internados_" + ano + ", "
+                    + r.acompanhantesCopiados() + " acompanhantes copiados para acompanhantes_" + ano + " e "
                     + r.logsCopiados() + " logs gravados em logs_" + ano + ".";
             if (apagar) {
-                mensagem += " Removidos do sistema: " + r.registrosApagados() + " registros e "
-                        + r.pessoasApagadas() + " pessoas.";
+                mensagem += " Removidos do sistema: " + r.registrosApagados() + " registros, "
+                        + r.pessoasApagadas() + " pessoas, "
+                        + r.pacientesInternadosApagados() + " pacientes internados e "
+                        + r.acompanhantesApagados() + " acompanhantes.";
             }
 
             try {

@@ -31,6 +31,9 @@
                     <option value="CRIAÇÃO">CRIAÇÃO</option>
                     <option value="EDIÇÃO">EDIÇÃO</option>
                     <option value="EXCLUSÃO">EXCLUSÃO</option>
+                    <option value="ENTRADA">ENTRADA</option>
+                    <option value="SAÍDA">SAÍDA</option>
+                    <option value="BACKUP">BACKUP</option>
                 </select>
             </div>
 
@@ -40,11 +43,14 @@
                     <option value="">Todos os Módulos</option>
                     <option value="PESSOA">PESSOA</option>
                     <option value="USUARIO">USUARIO</option>
+                    <option value="PACIENTE_INTERNADO">PACIENTE INTERNADO</option>
+                    <option value="ACOMPANHANTE">ACOMPANHANTE</option>
+                    <option value="BACKUP">BACKUP</option>
                 </select>
             </div>
         </div>
 
-        <!-- Div de Rolagem Isolada para a Tabela de Logs (Impede o corte no Mac) -->
+        <!-- Div de Rolagem Isolada para a Tabela de Logs -->
         <div class="tabela-responsiva">
             <table id="tabelaLogs">
                 <thead>
@@ -55,10 +61,10 @@
                     <th style="width: 220px;">
                         <button type="button" class="btn-ordenar" onclick="ordenarTabela(1)">Operador Responsável ↕</button>
                     </th>
-                    <th style="width: 120px;">
+                    <th style="width: 150px;">
                         <button type="button" class="btn-ordenar" onclick="ordenarTabela(2)">Ação ↕</button>
                     </th>
-                    <th style="width: 180px;">
+                    <th style="width: 200px;">
                         <button type="button" class="btn-ordenar" onclick="ordenarTabela(3)">Registro Afetado ↕</button>
                     </th>
                     <th>Detalhes das Alterações</th>
@@ -72,9 +78,14 @@
                         <small style="color: #666;" th:text="'CPF: ' + ${log.usuarioCpf}"></small>
                     </td>
                     <td>
-                        <span th:if="${log.acao == 'CRIACAO'}" style="color: green; font-weight: bold;">CRIAÇÃO</span>
+                        <span th:if="${log.acao == 'CRIACAO'}" style="color: var(--cor-sucesso); font-weight: bold;">CRIAÇÃO</span>
                         <span th:if="${log.acao == 'EDICAO'}" style="color: #d9822b; font-weight: bold;">EDIÇÃO</span>
-                        <span th:if="${log.acao == 'EXCLUSAO'}" style="color: red; font-weight: bold;">EXCLUSÃO</span>
+                        <span th:if="${log.acao == 'EXCLUSAO'}" style="color: var(--cor-perigo); font-weight: bold;">EXCLUSÃO</span>
+                        <span th:if="${log.acao != null && log.acao.startsWith('ENTRADA')}" style="color: var(--cor-primaria-esc); font-weight: bold;">ENTRADA</span>
+                        <span th:if="${log.acao != null && log.acao.startsWith('SAIDA')}" style="color: #6f42c1; font-weight: bold;"
+                              th:text="${log.acao == 'SAIDA_ALTA' ? 'SAÍDA (ALTA)' : (log.acao == 'SAIDA_OBITO' ? 'SAÍDA (ÓBITO)' : 'SAÍDA')}">SAÍDA</span>
+                        <span th:if="${log.acao != null && log.acao != 'CRIACAO' && log.acao != 'EDICAO' && log.acao != 'EXCLUSAO' && !log.acao.startsWith('ENTRADA') && !log.acao.startsWith('SAIDA')}"
+                              style="color: #495057; font-weight: bold;" th:text="${log.acao}"></span>
                     </td>
                     <td>
                         <span style="font-size: 0.8em; background: #eee; padding: 2px 6px; border-radius: 4px;" th:text="${log.entidade}"></span><br/>

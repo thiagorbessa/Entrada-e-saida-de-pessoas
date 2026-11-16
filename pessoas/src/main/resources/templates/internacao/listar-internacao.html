@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Internação</title>
+    <link rel="stylesheet" th:href="@{/css/estilo.css}" />
+</head>
+
+<body>
+
+<div th:replace="fragments/header :: app-header"></div>
+
+<main class="container-principal">
+    <div class="card-tabela">
+
+        <div class="titulo-secao">
+            <h1>Internação</h1>
+        </div>
+
+        <div th:if="${sucesso}" class="alert alert-sucesso">
+            <span th:text="${sucesso}"></span>
+        </div>
+        <div th:if="${erro}" class="alert alert-erro">
+            <span th:text="${erro}"></span>
+        </div>
+
+        <!-- Campo de Pesquisa em Tempo Real e Botões Novos -->
+        <div class="busca-container">
+            <div class="busca-wrapper">
+                <input type="text" id="busca-internacao" class="campo-busca"
+                       placeholder="Filtrar por nome, CPF, leito, unidade ou paciente..." autocomplete="off" />
+                <a id="limpar-busca-internacao" class="btn-busca-limpar" href="javascript:void(0)">Limpar</a>
+                <button type="button" class="btn btn-salvar" onclick="abrirModal('modalNovoPaciente')">+ Novo Paciente</button>
+                <button type="button" class="btn-novo" onclick="abrirModal('modalNovoAcompanhante')">+ Novo Acompanhante</button>
+            </div>
+        </div>
+
+        <!-- ============================================================== -->
+        <!-- TABELA 1: PACIENTES INTERNADOS                                 -->
+        <!-- ============================================================== -->
+        <h2 class="titulo-secao" style="font-size: 1.15rem; color: var(--cor-marca); margin: 10px 0 12px 0;">
+            Pacientes Internados
+        </h2>
+
+        <div class="tabela-responsiva tabela-pessoas-responsiva mb-15">
+            <table id="tabela-pacientes">
+                <colgroup sec:authorize="hasAnyRole('SISTEMA', 'GERAL')">
+                    <col style="width: 8%">    <!-- CPF -->
+                    <col style="width: 11%">   <!-- Nome -->
+                    <col style="width: 8%">    <!-- Telefone -->
+                    <col style="width: 5.5%">  <!-- Unidade -->
+                    <col style="width: 6%">    <!-- Andar -->
+                    <col style="width: 6.5%">  <!-- Leito -->
+                    <col style="width: 8.5%">  <!-- Hora Entrada -->
+                    <col style="width: 8.5%">  <!-- Hora Saída -->
+                    <col style="width: 6%">    <!-- Status -->
+                    <col style="width: 8.5%">  <!-- Observação -->
+                    <col style="width: 8.5%">  <!-- Ação -->
+                    <col style="width: 5%">    <!-- Histórico -->
+                    <col style="width: 4.5%">  <!-- Editar -->
+                    <col style="width: 5.5%">  <!-- Remover -->
+                </colgroup>
+                <colgroup sec:authorize="!hasAnyRole('SISTEMA', 'GERAL')">
+                    <col style="width: 8.5%">  <!-- CPF -->
+                    <col style="width: 12%">   <!-- Nome -->
+                    <col style="width: 8.5%">  <!-- Telefone -->
+                    <col style="width: 6%">    <!-- Unidade -->
+                    <col style="width: 6.5%">  <!-- Andar -->
+                    <col style="width: 7%">    <!-- Leito -->
+                    <col style="width: 9%">    <!-- Hora Entrada -->
+                    <col style="width: 9%">    <!-- Hora Saída -->
+                    <col style="width: 6.5%">  <!-- Status -->
+                    <col style="width: 9%">    <!-- Observação -->
+                    <col style="width: 9%">    <!-- Ação -->
+                    <col style="width: 5%">    <!-- Histórico -->
+                    <col style="width: 4%">    <!-- Editar -->
+                </colgroup>
+
+                <thead>
+                <tr>
+                    <th><button type="button" class="btn-ordenar" data-col="0" data-tipo="texto">CPF ↕</button></th>
+                    <th><button type="button" class="btn-ordenar" data-col="1" data-tipo="texto">Nome ↕</button></th>
+                    <th><button type="button" class="btn-ordenar" data-col="2" data-tipo="texto">Telefone ↕</button></th>
+                    <th><button type="button" class="btn-ordenar" data-col="3" data-tipo="texto">Unidade ↕</button></th>
+                    <th><button type="button" class="btn-ordenar" data-col="4" data-tipo="texto">Andar ↕</button></th>
+                    <th><button type="button" class="btn-ordenar" data-col="5" data-tipo="texto">Leito ↕</button></th>
+                    <th><button type="button" class="btn-ordenar" data-col="6" data-tipo="data">Hora Entrada ↕</button></th>
+                    <th><button type="button" class="btn-ordenar" data-col="7" data-tipo="data">Hora Saída ↕</button></th>
+                    <th><button type="button" class="btn-ordenar" data-col="8" data-tipo="texto">Status ↕</button></th>
+                    <th><button type="button" class="btn-ordenar" data-col="9" data-tipo="texto">Observação ↕</button></th>
+                    <th>Ação</th>
+                    <th>Histórico</th>
+                    <th>Editar</th>
+                    <th class="th-remover" sec:authorize="hasAnyRole('SISTEMA', 'GERAL')">Remover</th>
+                </tr>
+                </thead>
+
+                <tbody>
+                <tr th:each="pac : ${pacientes}" class="linha-filtravel"
+                    th:with="st=${pac.statusEfetivo.name()}">
+                    <td class="td-nowrap" data-label="CPF" th:text="${pac.cpf}"></td>
+                    <td class="td-nome font-weight-600" data-label="Nome" th:text="${pac.nome}"></td>
+                    <td class="td-nowrap" data-label="Telefone"
+                        th:text="${pac.telefone != null && !pac.telefone.isBlank() ? pac.telefone : '-'}"></td>
+                    <td data-label="Unidade" th:text="${pac.unidade}"></td>
+                    <td data-label="Andar" th:text="${pac.andar}"></td>
+                    <td data-label="Leito" th:text="${pac.leito}"></td>
+                    <td class="td-nowrap" data-label="Hora Entrada"
+                        th:text="${pac.horaEntrada != null ? #temporals.format(pac.horaEntrada, 'dd/MM/yyyy HH:mm') : '-'}"></td>
+                    <td class="td-nowrap" data-label="Hora Saída"
+                        th:text="${pac.horaSaida != null ? #temporals.format(pac.horaSaida, 'dd/MM/yyyy HH:mm') : '-'}"></td>
+
+                    <td data-label="Status">
+                        <span th:if="${st == 'INTERNADO'}" style="color: var(--cor-sucesso); font-weight: 600;">Internado</span>
+                        <span th:if="${st == 'ALTA'}" style="color: var(--cor-primaria-esc); font-weight: 600;">Alta</span>
+                        <span th:if="${st == 'OBITO'}" style="color: var(--cor-perigo); font-weight: 600;">Óbito</span>
+                    </td>
+
+                    <td class="td-obs" data-label="Observação">
+                        <span th:text="${pac.observacao != null && !pac.observacao.isBlank() ? pac.observacao : '-'}"></span>
+                    </td>
+
+                    <td data-label="Ação">
+                        <button th:if="${st == 'INTERNADO'}"
+                                type="button"
+                                class="btn-acao btn-saida"
+                                th:data-id="${pac.id}"
+                                th:data-nome="${pac.nome}"
+                                onclick="abrirModalSaidaPaciente(this)">
+                            Registrar Saída
+                        </button>
+
+                        <form th:if="${st == 'ALTA'}"
+                              th:action="@{/internacao/paciente/entrada/{id}(id=${pac.id})}"
+                              method="post"
+                              onsubmit="return confirm('Registrar nova entrada de internação para este paciente?');">
+                            <button type="submit" class="btn-acao btn-entrada">Registrar Entrada</button>
+                        </form>
+
+                        <span th:if="${st == 'OBITO'}" style="color: #6c757d; font-weight: 600;">Finalizado</span>
+                    </td>
+
+                    <td data-label="Histórico">
+                        <a th:href="@{/internacao/paciente/{id}/historico(id=${pac.id})}" class="link-acao">Histórico</a>
+                    </td>
+
+                    <td data-label="Editar">
+                        <a href="javascript:void(0)"
+                           class="link-acao"
+                           th:data-id="${pac.id}"
+                           th:data-nome="${pac.nome}"
+                           th:data-cpf="${pac.cpf}"
+                           th:data-telefone="${pac.telefone}"
+                           th:data-unidade="${pac.unidade}"
+                           th:data-andar="${pac.andar}"
+                           th:data-leito="${pac.leito}"
+                           th:data-observacao="${pac.observacao}"
+                           onclick="abrirModalEditarPaciente(this)">Editar</a>
+                    </td>
+
+                    <td class="td-remover" data-label="Remover" sec:authorize="hasAnyRole('SISTEMA', 'GERAL')">
+                        <form th:action="@{/internacao/paciente/deletar/{id}(id=${pac.id})}" method="post"
+                              onsubmit="return confirm('Tem certeza que deseja apagar este paciente e seus acompanhantes vinculados?');">
+                            <button type="submit" class="btn-acao btn-remover">Remover</button>
+                        </form>
+                    </td>
+                </tr>
+
+                <tr class="linha-vazia" th:style="${pacientes != null && !#lists.isEmpty(pacientes)} ? 'display:none;' : ''">
+                    <td colspan="14" class="text-center" style="padding: 20px; color: #6c757d;">
+                        Nenhum paciente internado registrado.
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div id="paginacao-pacientes" class="paginacao-container mb-25"></div>
+
+        <!-- ============================================================== -->
+        <!-- TABELA 2: ACOMPANHANTES                                        -->
+        <!-- ============================================================== -->
+        <h2 class="titulo-secao" style="font-size: 1.15rem; color: var(--cor-marca); margin: 20px 0 12px 0;">
+            Acompanhantes
+        </h2>
+
+        <div class="tabela-responsiva tabela-pessoas-responsiva mb-15">
+            <table id="tabela-acompanhantes">
+                <colgroup sec:authorize="hasAnyRole('SISTEMA', 'GERAL')">
+                    <col style="width: 8.5%">  <!-- CPF -->
+                    <col style="width: 12%">   <!-- Nome -->
+                    <col style="width: 8.5%">  <!-- Telefone -->
+                    <col style="width: 11%">   <!-- Paciente Vinculado -->
+                    <col style="width: 5.5%">  <!-- Unidade -->
+                    <col style="width: 6.5%">  <!-- Andar -->
+                    <col style="width: 7%">    <!-- Leito -->
+                    <col style="width: 9%">    <!-- Hora Entrada -->
+                    <col style="width: 9%">    <!-- Hora Saída -->
+                    <col style="width: 8.5%">  <!-- Ação -->
+                    <col style="width: 5%">    <!-- Histórico -->
+                    <col style="width: 4.5%">  <!-- Editar -->
+                    <col style="width: 5%">    <!-- Remover -->
+                </colgroup>
+                <colgroup sec:authorize="!hasAnyRole('SISTEMA', 'GERAL')">
+                    <col style="width: 9%">    <!-- CPF -->
+                    <col style="width: 13%">   <!-- Nome -->
+                    <col style="width: 9%">    <!-- Telefone -->
+                    <col style="width: 12%">   <!-- Paciente Vinculado -->
+                    <col style="width: 6%">    <!-- Unidade -->
+                    <col style="width: 7%">    <!-- Andar -->
+                    <col style="width: 7.5%">  <!-- Leito -->
+                    <col style="width: 9.5%">  <!-- Hora Entrada -->
+                    <col style="width: 9.5%">  <!-- Hora Saída -->
+                    <col style="width: 8.5%">  <!-- Ação -->
+                    <col style="width: 5%">    <!-- Histórico -->
+                    <col style="width: 4%">    <!-- Editar -->
+                </colgroup>
+
+                <thead>
+                <tr>
+                    <th><button type="button" class="btn-ordenar" data-col="0" data-tipo="texto">CPF ↕</button></th>
+                    <th><button type="button" class="btn-ordenar" data-col="1" data-tipo="texto">Nome ↕</button></th>
+                    <th><button type="button" class="btn-ordenar" data-col="2" data-tipo="texto">Telefone ↕</button></th>
+                    <th><button type="button" class="btn-ordenar" data-col="3" data-tipo="texto">Paciente Vinculado ↕</button></th>
+                    <th><button type="button" class="btn-ordenar" data-col="4" data-tipo="texto">Unidade ↕</button></th>
+                    <th><button type="button" class="btn-ordenar" data-col="5" data-tipo="texto">Andar ↕</button></th>
+                    <th><button type="button" class="btn-ordenar" data-col="6" data-tipo="texto">Leito ↕</button></th>
+                    <th><button type="button" class="btn-ordenar" data-col="7" data-tipo="data">Hora Entrada ↕</button></th>
+                    <th><button type="button" class="btn-ordenar" data-col="8" data-tipo="data">Hora Saída ↕</button></th>
+                    <th>Ação</th>
+                    <th>Histórico</th>
+                    <th>Editar</th>
+                    <th class="th-remover" sec:authorize="hasAnyRole('SISTEMA', 'GERAL')">Remover</th>
+                </tr>
+                </thead>
+
+                <tbody>
+                <tr th:each="acomp : ${acompanhantes}" class="linha-filtravel">
+                    <td class="td-nowrap" data-label="CPF" th:text="${acomp.cpf}"></td>
+                    <td class="td-nome font-weight-600" data-label="Nome" th:text="${acomp.nome}"></td>
+                    <td class="td-nowrap" data-label="Telefone"
+                        th:text="${acomp.telefone != null && !acomp.telefone.isBlank() ? acomp.telefone : '-'}"></td>
+                    <td class="td-nome font-weight-600" data-label="Paciente Vinculado"
+                        th:text="${acomp.paciente != null ? acomp.paciente.nome : '-'}"></td>
+                    <td data-label="Unidade" th:text="${acomp.unidade}"></td>
+                    <td data-label="Andar" th:text="${acomp.andar}"></td>
+                    <td data-label="Leito" th:text="${acomp.leito}"></td>
+                    <td class="td-nowrap" data-label="Hora Entrada"
+                        th:text="${acomp.horaEntrada != null ? #temporals.format(acomp.horaEntrada, 'dd/MM/yyyy HH:mm') : '-'}"></td>
+                    <td class="td-nowrap" data-label="Hora Saída"
+                        th:text="${acomp.horaSaida != null ? #temporals.format(acomp.horaSaida, 'dd/MM/yyyy HH:mm') : '-'}"></td>
+
+                    <td data-label="Ação"
+                        th:with="pacienteAtivo=${acomp != null && acomp.paciente != null && acomp.paciente.internadoAtivo}">
+
+                        <form th:if="${pacienteAtivo && acomp.horaSaida == null}"
+                              th:action="@{/internacao/acompanhante/saida/{id}(id=${acomp.id})}"
+                              method="post"
+                              onsubmit="return confirm('Confirmar saída deste acompanhante?');">
+                            <button type="submit" class="btn-acao btn-saida">Registrar Saída</button>
+                        </form>
+
+                        <form th:if="${pacienteAtivo && acomp.horaSaida != null}"
+                              th:action="@{/internacao/acompanhante/entrada/{id}(id=${acomp.id})}"
+                              method="post"
+                              onsubmit="return confirm('Registrar nova entrada para este acompanhante?');">
+                            <button type="submit" class="btn-acao btn-entrada">Registrar Entrada</button>
+                        </form>
+
+                        <span th:if="${!pacienteAtivo}" style="color: #6c757d; font-weight: 600;">Finalizado</span>
+                    </td>
+
+                    <td data-label="Histórico">
+                        <a th:href="@{/internacao/acompanhante/{id}/historico(id=${acomp.id})}" class="link-acao">Histórico</a>
+                    </td>
+
+                    <td data-label="Editar">
+                        <a href="javascript:void(0)"
+                           class="link-acao"
+                           th:data-id="${acomp.id}"
+                           th:data-paciente-id="${acomp.paciente != null ? acomp.paciente.id : ''}"
+                           th:data-nome="${acomp.nome}"
+                           th:data-cpf="${acomp.cpf}"
+                           th:data-telefone="${acomp.telefone}"
+                           th:data-unidade="${acomp.unidade}"
+                           th:data-andar="${acomp.andar}"
+                           th:data-leito="${acomp.leito}"
+                           onclick="abrirModalEditarAcompanhante(this)">Editar</a>
+                    </td>
+
+                    <td class="td-remover" data-label="Remover" sec:authorize="hasAnyRole('SISTEMA', 'GERAL')">
+                        <form th:action="@{/internacao/acompanhante/deletar/{id}(id=${acomp.id})}" method="post"
+                              onsubmit="return confirm('Tem certeza que deseja apagar este acompanhante?');">
+                            <button type="submit" class="btn-acao btn-remover">Remover</button>
+                        </form>
+                    </td>
+                </tr>
+
+                <tr class="linha-vazia" th:style="${acompanhantes != null && !#lists.isEmpty(acompanhantes)} ? 'display:none;' : ''">
+                    <td colspan="13" class="text-center" style="padding: 20px; color: #6c757d;">
+                        Nenhum acompanhante registrado.
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div id="paginacao-acompanhantes" class="paginacao-container"></div>
+
+    </div>
+</main>
+
+<!-- ====================================================================== -->
+<!-- MODAIS (NOVO PACIENTE, SAÍDA PACIENTE, EDITAR PACIENTE, ACOMPANHANTE)  -->
+<!-- ====================================================================== -->
+
+<!-- MODAL: NOVO PACIENTE INTERNADO -->
+<div id="modalNovoPaciente" class="modal">
+    <div class="modal-conteudo" style="max-width: 620px; max-height: 90vh; overflow-y: auto;">
+        <div class="modal-header">
+            <h3>Novo Paciente Internado</h3>
+            <button type="button" class="close-btn" onclick="fecharModal('modalNovoPaciente')">&times;</button>
+        </div>
+
+        <form th:action="@{/internacao/paciente}" method="post" class="form-grid form-limpar-cpf">
+            <div class="form-group full-width">
+                <label>Nome Completo <span class="obrigatorio">*</span></label>
+                <input type="text" name="nome" class="form-control" required />
+            </div>
+
+            <div class="form-group">
+                <label>CPF (11 dígitos) <span class="obrigatorio">*</span></label>
+                <input type="text" name="cpf" class="form-control campo-cpf" maxlength="14" required />
+            </div>
+
+            <div class="form-group">
+                <label>Telefone</label>
+                <input type="text" name="telefone" class="form-control" />
+            </div>
+
+            <div class="form-group">
+                <label>Unidade <span class="obrigatorio">*</span></label>
+                <select name="unidade" class="form-control" required>
+                    <option value="">Selecione a unidade...</option>
+                    <option th:each="u : ${unidades}" th:value="${u}" th:text="${u}"></option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Andar <span class="obrigatorio">*</span></label>
+                <input type="text" name="andar" class="form-control" required />
+            </div>
+
+            <div class="form-group">
+                <label>Leito <span class="obrigatorio">*</span></label>
+                <input type="text" name="leito" class="form-control" required />
+            </div>
+
+            <div class="form-group full-width">
+                <label>Observação</label>
+                <input type="text" name="observacao" class="form-control" />
+            </div>
+
+            <div class="modal-actions full-width">
+                <button type="button" class="btn btn-limpar" onclick="fecharModal('modalNovoPaciente')">Cancelar</button>
+                <button type="submit" class="btn btn-salvar">Salvar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL: REGISTRAR SAÍDA DO PACIENTE (ALTA / ÓBITO) -->
+<div id="modalSaidaPaciente" class="modal">
+    <div class="modal-conteudo">
+        <div class="modal-header">
+            <h3>Registrar Saída do Paciente</h3>
+            <button type="button" class="close-btn" onclick="fecharModal('modalSaidaPaciente')">&times;</button>
+        </div>
+
+        <form id="formSaidaPaciente" method="post" class="form-grid">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+
+            <div class="form-group full-width">
+                <p style="margin: 0;">Paciente: <strong id="nomeSaidaPaciente"></strong></p>
+            </div>
+
+            <div class="form-group full-width">
+                <label>Motivo da Saída <span class="obrigatorio">*</span></label>
+                <select name="statusSaida" class="form-control" required>
+                    <option value="">Selecione...</option>
+                    <option value="ALTA">Alta</option>
+                    <option value="OBITO">Óbito</option>
+                </select>
+            </div>
+
+            <div class="modal-actions full-width">
+                <button type="button" class="btn btn-limpar" onclick="fecharModal('modalSaidaPaciente')">Cancelar</button>
+                <button type="submit" class="btn btn-salvar">Confirmar Saída</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL: EDITAR PACIENTE INTERNADO -->
+<div id="modalEditarPaciente" class="modal">
+    <div class="modal-conteudo" style="max-width: 620px; max-height: 90vh; overflow-y: auto;">
+        <div class="modal-header">
+            <h3>Editar Paciente Internado</h3>
+            <button type="button" class="close-btn" onclick="fecharModal('modalEditarPaciente')">&times;</button>
+        </div>
+
+        <form id="formEditarPaciente" method="post" class="form-grid form-limpar-cpf">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+
+            <div class="form-group full-width">
+                <label>Nome Completo <span class="obrigatorio">*</span></label>
+                <input type="text" id="editPacNome" name="nome" class="form-control" required />
+            </div>
+
+            <div class="form-group">
+                <label>CPF (11 dígitos) <span class="obrigatorio">*</span></label>
+                <input type="text" id="editPacCpf" name="cpf" class="form-control campo-cpf" maxlength="14" required />
+            </div>
+
+            <div class="form-group">
+                <label>Telefone</label>
+                <input type="text" id="editPacTelefone" name="telefone" class="form-control" />
+            </div>
+
+            <div class="form-group">
+                <label>Unidade <span class="obrigatorio">*</span></label>
+                <select id="editPacUnidade" name="unidade" class="form-control" required>
+                    <option value="">Selecione a unidade...</option>
+                    <option th:each="u : ${unidades}" th:value="${u}" th:text="${u}"></option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Andar <span class="obrigatorio">*</span></label>
+                <input type="text" id="editPacAndar" name="andar" class="form-control" required />
+            </div>
+
+            <div class="form-group">
+                <label>Leito <span class="obrigatorio">*</span></label>
+                <input type="text" id="editPacLeito" name="leito" class="form-control" required />
+            </div>
+
+            <div class="form-group full-width">
+                <label>Observação</label>
+                <input type="text" id="editPacObservacao" name="observacao" class="form-control" />
+            </div>
+
+            <div class="modal-actions full-width">
+                <button type="button" class="btn btn-limpar" onclick="fecharModal('modalEditarPaciente')">Cancelar</button>
+                <button type="submit" class="btn btn-salvar">Salvar Alterações</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL: NOVO ACOMPANHANTE -->
+<div id="modalNovoAcompanhante" class="modal">
+    <div class="modal-conteudo" style="max-width: 620px; max-height: 90vh; overflow-y: auto;">
+        <div class="modal-header">
+            <h3>Novo Acompanhante</h3>
+            <button type="button" class="close-btn" onclick="fecharModal('modalNovoAcompanhante')">&times;</button>
+        </div>
+
+        <form th:action="@{/internacao/acompanhante}" method="post" class="form-grid form-limpar-cpf">
+            <div class="form-group full-width">
+                <label>Paciente Internado Vinculado <span class="obrigatorio">*</span></label>
+                <select name="pacienteId" id="selectPacienteAcomp" class="form-control" required onchange="preencherLocalPaciente(this)">
+                    <option value="">Selecione o paciente internado...</option>
+                    <option th:each="pac : ${pacientes}"
+                            th:if="${pac.internadoAtivo}"
+                            th:value="${pac.id}"
+                            th:data-unidade="${pac.unidade}"
+                            th:data-andar="${pac.andar}"
+                            th:data-leito="${pac.leito}"
+                            th:text="${pac.nome + ' (CPF: ' + pac.cpf + ' - Leito ' + pac.leito + ')'}">
+                    </option>
+                </select>
+            </div>
+
+            <div class="form-group full-width">
+                <label>Nome Completo do Acompanhante <span class="obrigatorio">*</span></label>
+                <input type="text" name="nome" class="form-control" required />
+            </div>
+
+            <div class="form-group">
+                <label>CPF (11 dígitos) <span class="obrigatorio">*</span></label>
+                <input type="text" name="cpf" class="form-control campo-cpf" maxlength="14" required />
+            </div>
+
+            <div class="form-group">
+                <label>Telefone</label>
+                <input type="text" name="telefone" class="form-control" />
+            </div>
+
+            <div class="form-group">
+                <label>Unidade <span class="obrigatorio">*</span></label>
+                <select name="unidade" id="novoAcompUnidade" class="form-control" required>
+                    <option value="">Selecione a unidade...</option>
+                    <option th:each="u : ${unidades}" th:value="${u}" th:text="${u}"></option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Andar <span class="obrigatorio">*</span></label>
+                <input type="text" name="andar" id="novoAcompAndar" class="form-control" required />
+            </div>
+
+            <div class="form-group">
+                <label>Leito <span class="obrigatorio">*</span></label>
+                <input type="text" name="leito" id="novoAcompLeito" class="form-control" required />
+            </div>
+
+            <div class="modal-actions full-width">
+                <button type="button" class="btn btn-limpar" onclick="fecharModal('modalNovoAcompanhante')">Cancelar</button>
+                <button type="submit" class="btn btn-salvar">Salvar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL: EDITAR ACOMPANHANTE -->
+<div id="modalEditarAcompanhante" class="modal">
+    <div class="modal-conteudo" style="max-width: 620px; max-height: 90vh; overflow-y: auto;">
+        <div class="modal-header">
+            <h3>Editar Acompanhante</h3>
+            <button type="button" class="close-btn" onclick="fecharModal('modalEditarAcompanhante')">&times;</button>
+        </div>
+
+        <form id="formEditarAcompanhante" method="post" class="form-grid form-limpar-cpf">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+
+            <div class="form-group full-width">
+                <label>Paciente Internado Vinculado <span class="obrigatorio">*</span></label>
+                <select id="editAcompPaciente" name="pacienteId" class="form-control" required>
+                    <option value="">Selecione o paciente...</option>
+                    <option th:each="pac : ${pacientes}"
+                            th:value="${pac.id}"
+                            th:text="${pac.nome + ' (CPF: ' + pac.cpf + ')'}">
+                    </option>
+                </select>
+            </div>
+
+            <div class="form-group full-width">
+                <label>Nome Completo do Acompanhante <span class="obrigatorio">*</span></label>
+                <input type="text" id="editAcompNome" name="nome" class="form-control" required />
+            </div>
+
+            <div class="form-group">
+                <label>CPF (11 dígitos) <span class="obrigatorio">*</span></label>
+                <input type="text" id="editAcompCpf" name="cpf" class="form-control campo-cpf" maxlength="14" required />
+            </div>
+
+            <div class="form-group">
+                <label>Telefone</label>
+                <input type="text" id="editAcompTelefone" name="telefone" class="form-control" />
+            </div>
+
+            <div class="form-group">
+                <label>Unidade <span class="obrigatorio">*</span></label>
+                <select id="editAcompUnidade" name="unidade" class="form-control" required>
+                    <option value="">Selecione a unidade...</option>
+                    <option th:each="u : ${unidades}" th:value="${u}" th:text="${u}"></option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Andar <span class="obrigatorio">*</span></label>
+                <input type="text" id="editAcompAndar" name="andar" class="form-control" required />
+            </div>
+
+            <div class="form-group">
+                <label>Leito <span class="obrigatorio">*</span></label>
+                <input type="text" id="editAcompLeito" name="leito" class="form-control" required />
+            </div>
+
+            <div class="modal-actions full-width">
+                <button type="button" class="btn btn-limpar" onclick="fecharModal('modalEditarAcompanhante')">Cancelar</button>
+                <button type="submit" class="btn btn-salvar">Salvar Alterações</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script th:inline="javascript">
+    const contextPath = /*[[@{/}]]*/ '/';
+
+    function abrirModal(id) {
+        document.getElementById(id).style.display = 'flex';
+    }
+
+    function fecharModal(id) {
+        document.getElementById(id).style.display = 'none';
+    }
+
+    function preencherLocalPaciente(selectEl) {
+        const opt = selectEl.options[selectEl.selectedIndex];
+        if (!opt || !opt.value) return;
+        document.getElementById('novoAcompUnidade').value = opt.getAttribute('data-unidade') || '';
+        document.getElementById('novoAcompAndar').value = opt.getAttribute('data-andar') || '';
+        document.getElementById('novoAcompLeito').value = opt.getAttribute('data-leito') || '';
+    }
+
+    function abrirModalSaidaPaciente(btn) {
+        const base = contextPath.endsWith('/') ? contextPath : contextPath + '/';
+        const id = btn.getAttribute('data-id');
+        document.getElementById('formSaidaPaciente').action = base + 'internacao/paciente/saida/' + id;
+        document.getElementById('nomeSaidaPaciente').textContent = btn.getAttribute('data-nome') || '';
+        abrirModal('modalSaidaPaciente');
+    }
+
+    function abrirModalEditarPaciente(el) {
+        const base = contextPath.endsWith('/') ? contextPath : contextPath + '/';
+        const id = el.getAttribute('data-id');
+
+        document.getElementById('formEditarPaciente').action = base + 'internacao/paciente/editar/' + id;
+        document.getElementById('editPacNome').value = el.getAttribute('data-nome') || '';
+        document.getElementById('editPacCpf').value = el.getAttribute('data-cpf') || '';
+        document.getElementById('editPacTelefone').value = el.getAttribute('data-telefone') || '';
+        document.getElementById('editPacUnidade').value = el.getAttribute('data-unidade') || '';
+        document.getElementById('editPacAndar').value = el.getAttribute('data-andar') || '';
+        document.getElementById('editPacLeito').value = el.getAttribute('data-leito') || '';
+        document.getElementById('editPacObservacao').value = el.getAttribute('data-observacao') || '';
+
+        abrirModal('modalEditarPaciente');
+    }
+
+    function abrirModalEditarAcompanhante(el) {
+        const base = contextPath.endsWith('/') ? contextPath : contextPath + '/';
+        const id = el.getAttribute('data-id');
+
+        document.getElementById('formEditarAcompanhante').action = base + 'internacao/acompanhante/editar/' + id;
+        document.getElementById('editAcompPaciente').value = el.getAttribute('data-paciente-id') || '';
+        document.getElementById('editAcompNome').value = el.getAttribute('data-nome') || '';
+        document.getElementById('editAcompCpf').value = el.getAttribute('data-cpf') || '';
+        document.getElementById('editAcompTelefone').value = el.getAttribute('data-telefone') || '';
+        document.getElementById('editAcompUnidade').value = el.getAttribute('data-unidade') || '';
+        document.getElementById('editAcompAndar').value = el.getAttribute('data-andar') || '';
+        document.getElementById('editAcompLeito').value = el.getAttribute('data-leito') || '';
+
+        abrirModal('modalEditarAcompanhante');
+    }
+
+    document.querySelectorAll('.form-limpar-cpf').forEach(form => {
+        form.addEventListener('submit', function () {
+            const cpfInput = this.querySelector('.campo-cpf');
+            if (cpfInput) cpfInput.value = cpfInput.value.replace(/\D/g, '');
+        });
+    });
+
+    document.addEventListener('DOMContentLoaded', function () {
+        function parseDataBr(texto) {
+            const limpo = (texto || '').trim();
+            if (!limpo || limpo === '-') return 0;
+            const m = limpo.match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})$/);
+            if (!m) return 0;
+            return new Date(
+                parseInt(m[3], 10),
+                parseInt(m[2], 10) - 1,
+                parseInt(m[1], 10),
+                parseInt(m[4], 10),
+                parseInt(m[5], 10)
+            ).getTime();
+        }
+
+        function criarTabelaInterativa(tabelaId, paginacaoId) {
+            const tabela = document.getElementById(tabelaId);
+            const containerPag = document.getElementById(paginacaoId);
+            if (!tabela || !containerPag) return null;
+
+            const tbody = tabela.querySelector('tbody');
+            const todasLinhas = Array.from(tbody.querySelectorAll('tr.linha-filtravel'));
+            const linhaVazia = tbody.querySelector('tr.linha-vazia');
+
+            const estado = {
+                termo: '',
+                colOrdem: -1,
+                direcao: 'asc',
+                paginaAtual: 1,
+                porPagina: 10
+            };
+
+            function obterLinhasFiltradas() {
+                let filtradas = todasLinhas.filter(tr => {
+                    if (!estado.termo) return true;
+                    return tr.innerText.toLowerCase().includes(estado.termo);
+                });
+
+                if (estado.colOrdem >= 0) {
+                    const btn = tabela.querySelector(`thead .btn-ordenar[data-col="${estado.colOrdem}"]`);
+                    const tipo = btn ? btn.getAttribute('data-tipo') : 'texto';
+                    const mult = estado.direcao === 'asc' ? 1 : -1;
+
+                    filtradas.sort((a, b) => {
+                        const txtA = (a.children[estado.colOrdem]?.innerText || '').trim();
+                        const txtB = (b.children[estado.colOrdem]?.innerText || '').trim();
+
+                        if (tipo === 'data') {
+                            return (parseDataBr(txtA) - parseDataBr(txtB)) * mult;
+                        }
+                        return txtA.localeCompare(txtB, 'pt-BR', { numeric: true, sensitivity: 'base' }) * mult;
+                    });
+                }
+
+                return filtradas;
+            }
+
+            function atualizarRotulosOrdenacao() {
+                tabela.querySelectorAll('thead .btn-ordenar').forEach(btn => {
+                    const col = parseInt(btn.getAttribute('data-col'), 10);
+                    const baseTexto = btn.textContent.replace(/\s*[↕▲▼]$/, '');
+                    if (col === estado.colOrdem) {
+                        btn.textContent = baseTexto + (estado.direcao === 'asc' ? ' ▲' : ' ▼');
+                    } else {
+                        btn.textContent = baseTexto + ' ↕';
+                    }
+                });
+            }
+
+            function renderizar() {
+                const filtradas = obterLinhasFiltradas();
+                const total = filtradas.length;
+                const totalPaginas = Math.max(1, Math.ceil(total / estado.porPagina));
+
+                if (estado.paginaAtual > totalPaginas) estado.paginaAtual = totalPaginas;
+                if (estado.paginaAtual < 1) estado.paginaAtual = 1;
+
+                const inicio = (estado.paginaAtual - 1) * estado.porPagina;
+                const fim = Math.min(inicio + estado.porPagina, total);
+
+                todasLinhas.forEach(tr => tr.style.display = 'none');
+
+                filtradas.slice(inicio, fim).forEach(tr => {
+                    tbody.appendChild(tr);
+                    tr.style.display = '';
+                });
+
+                if (linhaVazia) {
+                    linhaVazia.style.display = total === 0 ? '' : 'none';
+                }
+
+                atualizarRotulosOrdenacao();
+                renderizarPaginacao(total, inicio, fim, totalPaginas);
+            }
+
+            function renderizarPaginacao(total, inicio, fim, totalPaginas) {
+                if (total === 0) {
+                    containerPag.style.display = 'none';
+                    containerPag.innerHTML = '';
+                    return;
+                }
+                containerPag.style.display = 'flex';
+
+                let itensHtml = '';
+                const maxBotoes = 5;
+                let pIni = Math.max(1, estado.paginaAtual - Math.floor(maxBotoes / 2));
+                let pFim = Math.min(totalPaginas, pIni + maxBotoes - 1);
+                if (pFim - pIni + 1 < maxBotoes) {
+                    pIni = Math.max(1, pFim - maxBotoes + 1);
+                }
+
+                for (let p = pIni; p <= pFim; p++) {
+                    itensHtml += `<li class="${p === estado.paginaAtual ? 'active' : ''}">
+                        <a href="javascript:void(0)" data-pag="${p}">${p}</a>
+                    </li>`;
+                }
+
+                containerPag.innerHTML = `
+                    <div class="paginacao-tamanho">
+                        <select class="select-por-pagina">
+                            <option value="10" ${estado.porPagina === 10 ? 'selected' : ''}>10</option>
+                            <option value="25" ${estado.porPagina === 25 ? 'selected' : ''}>25</option>
+                            <option value="50" ${estado.porPagina === 50 ? 'selected' : ''}>50</option>
+                            <option value="100" ${estado.porPagina === 100 ? 'selected' : ''}>100</option>
+                        </select>
+                        <span>linhas / página</span>
+                    </div>
+                    <div class="paginacao-info">
+                        Exibindo ${inicio + 1} a ${fim} de ${total} linhas
+                    </div>
+                    <ul class="paginacao-botoes">
+                        <li class="${estado.paginaAtual === 1 ? 'disabled' : ''}">
+                            <a href="javascript:void(0)" data-pag="1">&laquo;</a>
+                        </li>
+                        <li class="${estado.paginaAtual === 1 ? 'disabled' : ''}">
+                            <a href="javascript:void(0)" data-pag="${estado.paginaAtual - 1}">&lsaquo;</a>
+                        </li>
+                        ${itensHtml}
+                        <li class="${estado.paginaAtual === totalPaginas ? 'disabled' : ''}">
+                            <a href="javascript:void(0)" data-pag="${estado.paginaAtual + 1}">&rsaquo;</a>
+                        </li>
+                        <li class="${estado.paginaAtual === totalPaginas ? 'disabled' : ''}">
+                            <a href="javascript:void(0)" data-pag="${totalPaginas}">&raquo;</a>
+                        </li>
+                    </ul>
+                `;
+
+                containerPag.querySelector('.select-por-pagina').addEventListener('change', function () {
+                    estado.porPagina = parseInt(this.value, 10);
+                    estado.paginaAtual = 1;
+                    renderizar();
+                });
+
+                containerPag.querySelectorAll('.paginacao-botoes a[data-pag]').forEach(link => {
+                    link.addEventListener('click', function () {
+                        if (this.parentElement.classList.contains('disabled')) return;
+                        estado.paginaAtual = parseInt(this.getAttribute('data-pag'), 10);
+                        renderizar();
+                    });
+                });
+            }
+
+            tabela.querySelectorAll('thead .btn-ordenar').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    const col = parseInt(this.getAttribute('data-col'), 10);
+                    if (estado.colOrdem === col) {
+                        estado.direcao = estado.direcao === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        estado.colOrdem = col;
+                        estado.direcao = 'asc';
+                    }
+                    estado.paginaAtual = 1;
+                    renderizar();
+                });
+            });
+
+            renderizar();
+
+            return {
+                filtrar(termo) {
+                    estado.termo = (termo || '').toLowerCase().trim();
+                    estado.paginaAtual = 1;
+                    renderizar();
+                }
+            };
+        }
+
+        const ctrlPacientes = criarTabelaInterativa('tabela-pacientes', 'paginacao-pacientes');
+        const ctrlAcompanhantes = criarTabelaInterativa('tabela-acompanhantes', 'paginacao-acompanhantes');
+
+        const campoBusca = document.getElementById('busca-internacao');
+        const btnLimpar = document.getElementById('limpar-busca-internacao');
+
+        if (campoBusca) {
+            campoBusca.addEventListener('input', function () {
+                if (ctrlPacientes) ctrlPacientes.filtrar(this.value);
+                if (ctrlAcompanhantes) ctrlAcompanhantes.filtrar(this.value);
+            });
+        }
+
+        if (btnLimpar && campoBusca) {
+            btnLimpar.addEventListener('click', function () {
+                campoBusca.value = '';
+                if (ctrlPacientes) ctrlPacientes.filtrar('');
+                if (ctrlAcompanhantes) ctrlAcompanhantes.filtrar('');
+            });
+        }
+    });
+</script>
+
+</body>
+</html>
