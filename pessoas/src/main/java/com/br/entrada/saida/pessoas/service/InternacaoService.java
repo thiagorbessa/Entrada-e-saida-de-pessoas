@@ -2,6 +2,7 @@ package com.br.entrada.saida.pessoas.service;
 
 import com.br.entrada.saida.pessoas.dto.AcompanhanteRecord;
 import com.br.entrada.saida.pessoas.dto.PacienteInternadoRecord;
+import com.br.entrada.saida.pessoas.exception.AcessoNegadoException;
 import com.br.entrada.saida.pessoas.model.*;
 import com.br.entrada.saida.pessoas.repository.AcompanhanteRepository;
 import com.br.entrada.saida.pessoas.repository.LogAuditoriaRepository;
@@ -31,6 +32,56 @@ public class InternacaoService {
     private final AuditoriaService auditoriaService;
     private final LogAuditoriaRepository logAuditoriaRepository;
 
+    // ==========================================
+    // CONTROLE DE PERMISSÃO POR UNIDADE
+    // ==========================================
+    public boolean isAdmin(Usuario usuario) {
+        if (usuario == null || usuario.getPerfil() == null) return false;
+        String perfil = usuario.getPerfil();
+        return "ROLE_GERAL".equals(perfil) || "ROLE_ADMIN".equals(perfil);
+    }
+
+    public void validarPermissaoUnidade(Usuario operador, Unidade unidade) {
+        if (isAdmin(operador)) return;
+        if (operador == null || operador.getUnidades() == null || unidade == null
+                || !operador.getUnidades().contains(unidade)) {
+            throw new AcessoNegadoException("Você não tem permissão para visualizar ou movimentar cadastros desta unidade.");
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public List<PacienteInternado> listarPacientesPorUsuario(Usuario usuario) {
+        if (isAdmin(usuario)) {
+            return pacienteRepository.findAllByOrderByHoraEntradaDesc();
+        }
+        if (usuario == null || usuario.getUnidades() == null || usuario.getUnidades().isEmpty()) {
+            return List.of();
+        }
+        return pacienteRepository.findByUnidadeInOrderByHoraEntradaDesc(usuario.getUnidades());
+    }
+
+    @Transactional(readOnly = true)
+    public List<PacienteInternado> listarPacientesAtivosPorUsuario(Usuario usuario) {
+        if (isAdmin(usuario)) {
+            return pacienteRepository.findByHoraSaidaIsNullOrderByNomeAsc();
+        }
+        if (usuario == null || usuario.getUnidades() == null || usuario.getUnidades().isEmpty()) {
+            return List.of();
+        }
+        return pacienteRepository.findByUnidadeInAndHoraSaidaIsNullOrderByNomeAsc(usuario.getUnidades());
+    }
+
+    @Transactional(readOnly = true)
+    public List<Acompanhante> listarAcompanhantesPorUsuario(Usuario usuario) {
+        if (isAdmin(usuario)) {
+            return acompanhanteRepository.findAllByOrderByHoraEntradaDesc();
+        }
+        if (usuario == null || usuario.getUnidades() == null || usuario.getUnidades().isEmpty()) {
+            return List.of();
+        }
+        return acompanhanteRepository.findByUnidadeInOrderByHoraEntradaDesc(usuario.getUnidades());
+    }
+
     private void validarLimitesAcompanhante(PacienteInternado paciente) {
         if (paciente == null || !paciente.isInternadoAtivo()) {
             throw new IllegalStateException("Acesso bloqueado: O paciente vinculado já recebeu Alta ou Óbito e não está internado.");
@@ -57,11 +108,15 @@ public class InternacaoService {
     // ==========================================
     @Transactional
     public PacienteInternado registrarEntradaPaciente(PacienteInternadoRecord dto, Usuario operador) {
+        validarPermissaoUnidade(operador, dto.unidade());
+
         String cpfLimpo = dto.cpf() != null ? dto.cpf().replaceAll("\\D", "") : null;
 
         Optional<PacienteInternado> existenteOpt = pacienteRepository.findByCpf(cpfLimpo);
         if (existenteOpt.isPresent()) {
             PacienteInternado existente = existenteOpt.get();
+
+            validarPermissaoUnidade(operador, existente.getUnidade());
 
             if (existente.isObito()) {
                 throw new IllegalStateException("Operação bloqueada: Este paciente possui registro finalizado por Óbito.");
@@ -117,6 +172,8 @@ public class InternacaoService {
         PacienteInternado paciente = pacienteRepository.findById(idPaciente)
                 .orElseThrow(() -> new IllegalArgumentException("Paciente internado não encontrado."));
 
+        validarPermissaoUnidade(operador, paciente.getUnidade());
+
         if (paciente.isObito()) {
             throw new IllegalStateException("Operação bloqueada: Registro finalizado por Óbito não permite nova entrada.");
         }
@@ -144,6 +201,8 @@ public class InternacaoService {
         PacienteInternado paciente = pacienteRepository.findById(idPaciente)
                 .orElseThrow(() -> new IllegalArgumentException("Paciente internado não encontrado."));
 
+        validarPermissaoUnidade(operador, paciente.getUnidade());
+
         if (!paciente.isInternadoAtivo()) {
             throw new IllegalStateException("Este paciente já possui registro de saída.");
         }
@@ -153,7 +212,6 @@ public class InternacaoService {
 
         LocalDateTime agora = LocalDateTime.now();
 
-        // Encerra automaticamente acompanhantes ativos quando o paciente recebe Alta ou Óbito
         if (paciente.getAcompanhantes() != null) {
             for (Acompanhante acomp : paciente.getAcompanhantes()) {
                 if (acomp.getHoraSaida() == null) {
@@ -195,9 +253,12 @@ public class InternacaoService {
             throw new IllegalArgumentException("É obrigatório informar o paciente vinculado ao acompanhante.");
         }
 
+        validarPermissaoUnidade(operador, dto.unidade());
+
         PacienteInternado paciente = pacienteRepository.findById(dto.pacienteId())
                 .orElseThrow(() -> new IllegalArgumentException("Paciente internado não encontrado."));
 
+        validarPermissaoUnidade(operador, paciente.getUnidade());
         validarLimitesAcompanhante(paciente);
 
         String cpfLimpo = dto.cpf() != null ? dto.cpf().replaceAll("\\D", "") : null;
@@ -236,11 +297,14 @@ public class InternacaoService {
         Acompanhante acompanhante = acompanhanteRepository.findById(idAcompanhante)
                 .orElseThrow(() -> new IllegalArgumentException("Acompanhante não encontrado."));
 
+        validarPermissaoUnidade(operador, acompanhante.getUnidade());
+
         if (acompanhante.getHoraSaida() == null) {
             throw new IllegalStateException("Este acompanhante já possui uma entrada ativa.");
         }
 
         PacienteInternado paciente = acompanhante.getPaciente();
+        validarPermissaoUnidade(operador, paciente.getUnidade());
         validarLimitesAcompanhante(paciente);
 
         if (acompanhanteRepository.existsByCpfAndHoraSaidaIsNull(acompanhante.getCpf())) {
@@ -269,6 +333,8 @@ public class InternacaoService {
     public Acompanhante registrarSaidaAcompanhante(UUID idAcompanhante, Usuario operador) {
         Acompanhante acompanhante = acompanhanteRepository.findById(idAcompanhante)
                 .orElseThrow(() -> new IllegalArgumentException("Acompanhante não encontrado."));
+
+        validarPermissaoUnidade(operador, acompanhante.getUnidade());
 
         if (acompanhante.getHoraSaida() != null) {
             throw new IllegalStateException("Este acompanhante já possui registro de saída.");
@@ -301,6 +367,7 @@ public class InternacaoService {
     public List<LogAuditoria> buscarLogsAcompanhante(UUID acompanhanteId) {
         return logAuditoriaRepository.findByEntidadeIdAndEntidadeOrderByDataHoraDesc(acompanhanteId, ENTIDADE_ACOMPANHANTE);
     }
+
     private boolean podeExcluir(Usuario operador) {
         if (operador == null || operador.getPerfil() == null) return false;
         String perfil = operador.getPerfil();
@@ -315,6 +382,9 @@ public class InternacaoService {
     public PacienteInternado editarPaciente(UUID id, PacienteInternadoRecord dto, Usuario operador) {
         PacienteInternado paciente = pacienteRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Paciente internado não encontrado."));
+
+        validarPermissaoUnidade(operador, paciente.getUnidade());
+        validarPermissaoUnidade(operador, dto.unidade());
 
         String cpfLimpo = dto.cpf() != null ? dto.cpf().replaceAll("\\D", "") : null;
         if (cpfLimpo != null && !cpfLimpo.equals(paciente.getCpf())) {
@@ -356,6 +426,8 @@ public class InternacaoService {
         PacienteInternado paciente = pacienteRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Paciente internado não encontrado."));
 
+        validarPermissaoUnidade(operador, paciente.getUnidade());
+
         String nome = paciente.getNome();
         String cpf = paciente.getCpf();
         pacienteRepository.delete(paciente);
@@ -372,12 +444,16 @@ public class InternacaoService {
         Acompanhante acompanhante = acompanhanteRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Acompanhante não encontrado."));
 
+        validarPermissaoUnidade(operador, acompanhante.getUnidade());
+        validarPermissaoUnidade(operador, dto.unidade());
+
         String cpfLimpo = dto.cpf() != null ? dto.cpf().replaceAll("\\D", "") : null;
 
         PacienteInternado paciente = acompanhante.getPaciente();
         if (dto.pacienteId() != null && (paciente == null || !paciente.getId().equals(dto.pacienteId()))) {
             paciente = pacienteRepository.findById(dto.pacienteId())
                     .orElseThrow(() -> new IllegalArgumentException("Paciente vinculado não encontrado."));
+            validarPermissaoUnidade(operador, paciente.getUnidade());
             acompanhante.setPaciente(paciente);
         }
 
@@ -410,6 +486,8 @@ public class InternacaoService {
 
         Acompanhante acompanhante = acompanhanteRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Acompanhante não encontrado."));
+
+        validarPermissaoUnidade(operador, acompanhante.getUnidade());
 
         String nome = acompanhante.getNome();
         String cpf = acompanhante.getCpf();

@@ -20,7 +20,9 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.security.Principal;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/internacao")
@@ -37,17 +39,30 @@ public class InternacaoController {
         return usuarioRepository.findByCpf(principal.getName()).orElse(null);
     }
 
+    private List<Unidade> obterUnidadesPermitidas(Usuario usuarioLogado) {
+        if (internacaoService.isAdmin(usuarioLogado)) {
+            return List.of(Unidade.values());
+        }
+        if (usuarioLogado != null && usuarioLogado.getUnidades() != null && !usuarioLogado.getUnidades().isEmpty()) {
+            return usuarioLogado.getUnidades().stream().collect(Collectors.toList());
+        }
+        return List.of();
+    }
+
     @GetMapping
     public String listar(Model model, Principal principal) {
-        model.addAttribute("usuarioLogado", obterUsuarioLogado(principal));
-        model.addAttribute("pacientes", pacienteRepository.findAllByOrderByHoraEntradaDesc());
-        model.addAttribute("pacientesAtivos", pacienteRepository.findByHoraSaidaIsNullOrderByNomeAsc());
-        model.addAttribute("acompanhantes", acompanhanteRepository.findAllByOrderByHoraEntradaDesc());
-        model.addAttribute("unidades", Unidade.values());
+        Usuario usuarioLogado = obterUsuarioLogado(principal);
+
+        model.addAttribute("usuarioLogado", usuarioLogado);
+        model.addAttribute("pacientes", internacaoService.listarPacientesPorUsuario(usuarioLogado));
+        model.addAttribute("pacientesAtivos", internacaoService.listarPacientesAtivosPorUsuario(usuarioLogado));
+        model.addAttribute("acompanhantes", internacaoService.listarAcompanhantesPorUsuario(usuarioLogado));
+        model.addAttribute("unidades", obterUnidadesPermitidas(usuarioLogado));
+
         return "internacao/listar-internacao";
     }
 
-    @PostMapping("/paciente/salvar")
+    @PostMapping({"/paciente", "/paciente/salvar"})
     public String salvarPaciente(@Valid @ModelAttribute PacienteInternadoRecord dto,
                                  BindingResult result,
                                  Principal principal,
@@ -94,7 +109,7 @@ public class InternacaoController {
         return "redirect:/internacao";
     }
 
-    @PostMapping("/acompanhante/salvar")
+    @PostMapping({"/acompanhante", "/acompanhante/salvar"})
     public String salvarAcompanhante(@Valid @ModelAttribute AcompanhanteRecord dto,
                                      BindingResult result,
                                      Principal principal,
@@ -138,12 +153,21 @@ public class InternacaoController {
         }
         return "redirect:/internacao";
     }
+
     @GetMapping("/paciente/{id}/historico")
-    public String historicoPaciente(@PathVariable UUID id, Model model, Principal principal) {
+    public String historicoPaciente(@PathVariable UUID id, Model model, Principal principal, RedirectAttributes redirectAttributes) {
+        Usuario usuarioLogado = obterUsuarioLogado(principal);
         PacienteInternado paciente = pacienteRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Paciente internado não encontrado."));
 
-        model.addAttribute("usuarioLogado", obterUsuarioLogado(principal));
+        try {
+            internacaoService.validarPermissaoUnidade(usuarioLogado, paciente.getUnidade());
+        } catch (RuntimeException e) {
+            redirectAttributes.addFlashAttribute("erro", e.getMessage());
+            return "redirect:/internacao";
+        }
+
+        model.addAttribute("usuarioLogado", usuarioLogado);
         model.addAttribute("tipo", "PACIENTE");
         model.addAttribute("pessoa", paciente);
         model.addAttribute("pacienteVinculado", paciente.getNome());
@@ -156,11 +180,19 @@ public class InternacaoController {
     }
 
     @GetMapping("/acompanhante/{id}/historico")
-    public String historicoAcompanhante(@PathVariable UUID id, Model model, Principal principal) {
+    public String historicoAcompanhante(@PathVariable UUID id, Model model, Principal principal, RedirectAttributes redirectAttributes) {
+        Usuario usuarioLogado = obterUsuarioLogado(principal);
         Acompanhante acompanhante = acompanhanteRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Acompanhante não encontrado."));
 
-        model.addAttribute("usuarioLogado", obterUsuarioLogado(principal));
+        try {
+            internacaoService.validarPermissaoUnidade(usuarioLogado, acompanhante.getUnidade());
+        } catch (RuntimeException e) {
+            redirectAttributes.addFlashAttribute("erro", e.getMessage());
+            return "redirect:/internacao";
+        }
+
+        model.addAttribute("usuarioLogado", usuarioLogado);
         model.addAttribute("tipo", "ACOMPANHANTE");
         model.addAttribute("pessoa", acompanhante);
         model.addAttribute("pacienteVinculado",
@@ -236,6 +268,4 @@ public class InternacaoController {
         }
         return "redirect:/internacao";
     }
-
-
 }
