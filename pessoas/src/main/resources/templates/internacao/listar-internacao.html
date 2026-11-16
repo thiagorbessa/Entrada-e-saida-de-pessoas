@@ -754,7 +754,7 @@
                 colOrdem: -1,
                 direcao: 'asc',
                 paginaAtual: 1,
-                porPagina: 10
+                porPagina: 5
             };
 
             function obterLinhasFiltradas() {
@@ -874,7 +874,7 @@
                 `;
 
                 containerPag.querySelector('.select-por-pagina').addEventListener('change', function () {
-                    estado.porPagina = parseInt(this.value, 5);
+                    estado.porPagina = parseInt(this.value, 10);
                     estado.paginaAtual = 1;
                     renderizar();
                 });
@@ -890,7 +890,7 @@
 
             tabela.querySelectorAll('thead .btn-ordenar').forEach(btn => {
                 btn.addEventListener('click', function () {
-                    const col = parseInt(this.getAttribute('data-col'), 5);
+                    const col = parseInt(this.getAttribute('data-col'), 10);
                     if (estado.colOrdem === col) {
                         estado.direcao = estado.direcao === 'asc' ? 'desc' : 'asc';
                     } else {
@@ -934,7 +934,6 @@
             });
         }
     });
-
 </script>
 
 </body>
