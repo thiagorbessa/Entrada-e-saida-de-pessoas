@@ -58,6 +58,7 @@ public class InternacaoController {
         model.addAttribute("pacientesAtivos", internacaoService.listarPacientesAtivosPorUsuario(usuarioLogado));
         model.addAttribute("acompanhantes", internacaoService.listarAcompanhantesPorUsuario(usuarioLogado));
         model.addAttribute("unidades", obterUnidadesPermitidas(usuarioLogado));
+        model.addAttribute("podeAlterarLimite", internacaoService.podeAlterarLimiteAcompanhantes(usuarioLogado));
 
         return "internacao/listar-internacao";
     }

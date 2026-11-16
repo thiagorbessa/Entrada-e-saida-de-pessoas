@@ -121,6 +121,12 @@
 
                     <td class="td-obs" data-label="Observação">
                         <span th:text="${pac.observacao != null && !pac.observacao.isBlank() ? pac.observacao : '-'}"></span>
+                        <div th:if="${pac.limiteDiarioEfetivo != 5}" style="margin-top: 4px; font-size: 0.78rem; color: var(--cor-primaria-esc); font-weight: 600;">
+                            <span th:text="${pac.limiteDiarioIlimitado ? 'Acomp./dia: Ilimitado (00)' : 'Acomp./dia: ' + pac.limiteDiarioEfetivo}"></span>
+                            <span th:if="${pac.autorizadoPor != null && !pac.autorizadoPor.isBlank()}"
+                                  style="display: block; font-weight: normal; color: #555;"
+                                  th:text="'Aut.: ' + ${pac.autorizadoPor}"></span>
+                        </div>
                     </td>
 
                     <td data-label="Ação">
@@ -158,6 +164,8 @@
                            th:data-andar="${pac.andar}"
                            th:data-leito="${pac.leito}"
                            th:data-observacao="${pac.observacao}"
+                           th:data-limite="${pac.limiteDiarioEfetivo}"
+                           th:data-autorizado="${pac.autorizadoPor}"
                            onclick="abrirModalEditarPaciente(this)">Editar</a>
                     </td>
 
@@ -364,7 +372,33 @@
                 <input type="text" name="observacao" class="form-control" />
             </div>
 
-            <div class="modal-actions full-width">
+            <!-- Bloco exclusivo para ROLE_GERAL e ROLE_SISTEMA -->
+            <div sec:authorize="hasAnyRole('SISTEMA', 'GERAL')" class="full-width"
+                 style="grid-column: 1 / -1; background: #f8f9fa; padding: 12px; border-radius: 6px; border: 1px solid #dee2e6; margin-top: 6px;">
+                <div class="form-group mb-15">
+                    <label for="limiteDiarioPaciente">Qual a capacidade de acompanhantes diários esse paciente passa a ter?</label>
+                    <input type="text"
+                           id="limiteDiarioPaciente"
+                           name="limiteDiarioAcompanhantes"
+                           inputmode="numeric"
+                           pattern="[0-9]*"
+                           value="5"
+                           placeholder="Ex: 5 (digite 00 para ilimitado)"
+                           class="form-control" />
+                    <small style="color: #666; font-size: 0.8rem;">Padrão: 5. Digite <strong>00</strong> (ou 0) para ilimitado.</small>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="autorizadoPorPaciente">Autorizado por (Nome e Cargo):</label>
+                    <input type="text"
+                           id="autorizadoPorPaciente"
+                           name="autorizadoPor"
+                           placeholder="Ex: Dr. Carlos Silva - Diretor Médico"
+                           class="form-control" />
+                </div>
+            </div>
+
+            <div class="modal-actions full-width" style="grid-column: 1 / -1; display: flex; justify-content: flex-end; align-items: center; gap: 10px;">
                 <button type="button" class="btn btn-limpar" onclick="fecharModal('modalNovoPaciente')">Cancelar</button>
                 <button type="submit" class="btn btn-salvar">Salvar</button>
             </div>
@@ -453,7 +487,33 @@
                 <input type="text" id="editPacObservacao" name="observacao" class="form-control" />
             </div>
 
-            <div class="modal-actions full-width">
+            <!-- Bloco exclusivo para ROLE_GERAL e ROLE_SISTEMA -->
+            <div sec:authorize="hasAnyRole('SISTEMA', 'GERAL')" class="full-width"
+                 style="grid-column: 1 / -1; background: #f8f9fa; padding: 12px; border-radius: 6px; border: 1px solid #dee2e6; margin-top: 6px;">
+                <div class="form-group mb-15">
+                    <label for="editPacLimiteDiario">Qual a capacidade de acompanhantes diários esse paciente passa a ter?</label>
+                    <input type="text"
+                           id="editPacLimiteDiario"
+                           name="limiteDiarioAcompanhantes"
+                           inputmode="numeric"
+                           pattern="[0-9]*"
+                           value="5"
+                           placeholder="Ex: 5 (digite 00 para ilimitado)"
+                           class="form-control" />
+                    <small style="color: #666; font-size: 0.8rem;">Padrão: 5. Digite <strong>00</strong> (ou 0) para ilimitado.</small>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="editPacAutorizadoPor">Autorizado por (Nome e Cargo):</label>
+                    <input type="text"
+                           id="editPacAutorizadoPor"
+                           name="autorizadoPor"
+                           placeholder="Ex: Dr. Carlos Silva - Diretor Médico"
+                           class="form-control" />
+                </div>
+            </div>
+
+            <div class="modal-actions full-width" style="grid-column: 1 / -1; display: flex; justify-content: flex-end; align-items: center; gap: 10px;">
                 <button type="button" class="btn btn-limpar" onclick="fecharModal('modalEditarPaciente')">Cancelar</button>
                 <button type="submit" class="btn btn-salvar">Salvar Alterações</button>
             </div>
@@ -629,6 +689,16 @@
         document.getElementById('editPacLeito').value = el.getAttribute('data-leito') || '';
         document.getElementById('editPacObservacao').value = el.getAttribute('data-observacao') || '';
 
+        const campoLimite = document.getElementById('editPacLimiteDiario');
+        const campoAutorizado = document.getElementById('editPacAutorizadoPor');
+        if (campoLimite) {
+            const lim = el.getAttribute('data-limite');
+            campoLimite.value = (lim === '0') ? '00' : (lim || '5');
+        }
+        if (campoAutorizado) {
+            campoAutorizado.value = el.getAttribute('data-autorizado') || '';
+        }
+
         abrirModal('modalEditarPaciente');
     }
 
@@ -775,6 +845,7 @@
                 containerPag.innerHTML = `
                     <div class="paginacao-tamanho">
                         <select class="select-por-pagina">
+                            <option value="5" ${estado.porPagina === 5 ? 'selected' : ''}>5</option>
                             <option value="10" ${estado.porPagina === 10 ? 'selected' : ''}>10</option>
                             <option value="25" ${estado.porPagina === 25 ? 'selected' : ''}>25</option>
                             <option value="50" ${estado.porPagina === 50 ? 'selected' : ''}>50</option>
@@ -803,7 +874,7 @@
                 `;
 
                 containerPag.querySelector('.select-por-pagina').addEventListener('change', function () {
-                    estado.porPagina = parseInt(this.value, 10);
+                    estado.porPagina = parseInt(this.value, 5);
                     estado.paginaAtual = 1;
                     renderizar();
                 });
@@ -819,7 +890,7 @@
 
             tabela.querySelectorAll('thead .btn-ordenar').forEach(btn => {
                 btn.addEventListener('click', function () {
-                    const col = parseInt(this.getAttribute('data-col'), 10);
+                    const col = parseInt(this.getAttribute('data-col'), 5);
                     if (estado.colOrdem === col) {
                         estado.direcao = estado.direcao === 'asc' ? 'desc' : 'asc';
                     } else {
@@ -863,6 +934,7 @@
             });
         }
     });
+
 </script>
 
 </body>

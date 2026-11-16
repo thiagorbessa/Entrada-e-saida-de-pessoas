@@ -98,4 +98,18 @@ public class PacienteInternado {
     public boolean isNovo() {
         return id == null;
     }
+
+    @Column(name = "limite_diario_acompanhantes")
+    private Integer limiteDiarioAcompanhantes = 5;
+
+    @Column(name = "autorizado_por", length = 200)
+    private String autorizadoPor;
+
+    public int getLimiteDiarioEfetivo() {
+        return limiteDiarioAcompanhantes != null ? limiteDiarioAcompanhantes : 5;
+    }
+
+    public boolean isLimiteDiarioIlimitado() {
+        return getLimiteDiarioEfetivo() == 0;
+    }
 }
