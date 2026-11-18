@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Controller
@@ -113,7 +114,7 @@ public class UsuarioController {
     }
 
     @DeleteMapping("/{id}")
-    public String excluir(@PathVariable Long id, Authentication auth, RedirectAttributes redirectAttributes) {
+    public String excluir(@PathVariable UUID id, Authentication auth, RedirectAttributes redirectAttributes) {
         Usuario usuarioLogado = getUsuarioLogado(auth);
         usuarioService.deletar(id, usuarioLogado);
         redirectAttributes.addFlashAttribute("sucesso", "Usuário excluído com sucesso.");
@@ -121,7 +122,7 @@ public class UsuarioController {
     }
 
     @GetMapping("/{id}/editar")
-    public String editar(@PathVariable Long id, Model model, Authentication auth) {
+    public String editar(@PathVariable UUID id, Model model, Authentication auth) {
         Usuario usuario = usuarioService.buscarPorId(id);
         Usuario usuarioLogado = getUsuarioLogado(auth);
         boolean isGeral = isAdminGeral(auth);
@@ -134,6 +135,7 @@ public class UsuarioController {
         dto.setUnidades(usuario.getUnidades());
 
         model.addAttribute("usuario", dto);
+        model.addAttribute("usuarioEntity", usuario);
         prepararModelFormulario(model, usuarioLogado, isGeral);
         return "usuarios/formulario";
     }

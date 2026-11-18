@@ -43,9 +43,16 @@
         </div>
     </nav>
 
+    <div th:if="${alertaMfa}" data-persist="true" class="alert alert-warning alert-dismissible fade show text-center" role="alert" style="margin: 0; border-radius: 0;">
+        <i class="fas fa-shield-alt"></i> <strong th:text="${alertaMfa}"></strong>
+        <a th:href="@{/2fa/configurar}" class="btn btn-sm btn-dark ms-3">Configurar Agora</a>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             document.querySelectorAll('.alert').forEach(function (alerta) {
+                if (alerta.dataset.persist === 'true') return;
                 setTimeout(function () {
                     alerta.style.transition = 'opacity 0.3s ease';
                     alerta.style.opacity = '0';

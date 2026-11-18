@@ -123,11 +123,10 @@ public class MfaController {
 
         usuario.setSecret2fa(tempSecret);
         usuario.setMfaAtivo(true);
+        usuario.setAcessosSemMfa(0);
         usuarioRepository.save(usuario);
-        session.removeAttribute(SESSION_TEMP_SECRET);
 
-        UUID uuidLog = UUID.nameUUIDFromBytes(usuario.getId().toString().getBytes());
-        auditoriaService.registrar(usuario, "ATIVACAO_2FA", "USUARIO", uuidLog,
+        auditoriaService.registrar(usuario, "ATIVACAO_2FA", "USUARIO", usuario.getId(),
                 usuario.getNomeCompleto(), "Ativou a autenticação em duas etapas (Google Authenticator)");
 
         redirectAttributes.addFlashAttribute("sucesso", "Verificação em duas etapas ativada com sucesso!");
@@ -153,18 +152,17 @@ public class MfaController {
         usuario.setMfaAtivo(false);
         usuarioRepository.save(usuario);
 
-        UUID uuidLog = UUID.nameUUIDFromBytes(usuario.getId().toString().getBytes());
-        auditoriaService.registrar(usuario, "DESATIVACAO_2FA", "USUARIO", uuidLog,
+        auditoriaService.registrar(usuario, "DESATIVACAO_2FA", "USUARIO", usuario.getId(),
                 usuario.getNomeCompleto(), "Desativou a autenticação em duas etapas");
 
         redirectAttributes.addFlashAttribute("sucesso", "Verificação em duas etapas desativada.");
         return "redirect:/2fa/configurar";
     }
 
-    // ==================== 3. RESET PELO ADMIN GERAL ====================
+    // ==================== 3. CONTROLE DE 2FA E ACESSOS PELO ADMIN GERAL ====================
 
     @PostMapping("/2fa/resetar/{id}")
-    public String resetar2faAdmin(@PathVariable Long id,
+    public String resetar2faAdmin(@PathVariable UUID id,
                                   Authentication auth,
                                   RedirectAttributes redirectAttributes) {
         Usuario admin = getUsuarioLogado(auth);
@@ -177,14 +175,51 @@ public class MfaController {
 
         alvo.setSecret2fa(null);
         alvo.setMfaAtivo(false);
+        alvo.setAcessosSemMfa(0);
         usuarioRepository.save(alvo);
 
-        UUID uuidLog = UUID.nameUUIDFromBytes(alvo.getId().toString().getBytes());
-        auditoriaService.registrar(admin, "RESET_2FA", "USUARIO", uuidLog,
-                alvo.getNomeCompleto(), "Resetou a autenticação em duas etapas do usuário");
+        auditoriaService.registrar(admin, "RESET_2FA", "USUARIO", alvo.getId(),
+                alvo.getNomeCompleto(), "Resetou a autenticação em duas etapas e zerou a contagem de acessos");
 
         redirectAttributes.addFlashAttribute("sucesso",
-                "Autenticação em duas etapas resetada para " + alvo.getNomeCompleto() + ".");
+                "Autenticação 2FA resetada e contagem zerada para " + alvo.getNomeCompleto() + ".");
+        return "redirect:/usuarios/" + id + "/editar";
+    }
+
+    @PostMapping("/2fa/gerenciar-acessos/{id}")
+    public String gerenciarAcessosSemMfa(@PathVariable UUID id,
+                                         @RequestParam("acao") String acao,
+                                         @RequestParam(value = "novoLimite", required = false) Integer novoLimite,
+                                         Authentication auth,
+                                         RedirectAttributes redirectAttributes) {
+        Usuario admin = getUsuarioLogado(auth);
+        if (admin == null || !"ROLE_GERAL".equals(admin.getPerfil())) {
+            throw new AcessoNegadoException("Apenas o Administrador Geral pode alterar os limites de acesso 2FA.");
+        }
+
+        Usuario alvo = usuarioRepository.findById(id)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Usuário não encontrado."));
+
+        if ("zerar".equals(acao)) {
+            alvo.setAcessosSemMfa(0);
+            usuarioRepository.save(alvo);
+
+            auditoriaService.registrar(admin, "RESET_CONTAGEM_2FA", "USUARIO", alvo.getId(),
+                    alvo.getNomeCompleto(), "Zerou a contagem de acessos sem 2FA");
+
+            redirectAttributes.addFlashAttribute("sucesso",
+                    "Contagem de acessos sem 2FA zerada para " + alvo.getNomeCompleto() + ".");
+        } else if ("alterarLimite".equals(acao) && novoLimite != null && novoLimite >= 0) {
+            alvo.setLimiteAcessosSemMfa(novoLimite);
+            usuarioRepository.save(alvo);
+
+            auditoriaService.registrar(admin, "ALTERACAO_LIMITE_2FA", "USUARIO", alvo.getId(),
+                    alvo.getNomeCompleto(), "Alterou o limite de acessos sem 2FA para " + novoLimite);
+
+            redirectAttributes.addFlashAttribute("sucesso",
+                    "Limite de acessos sem 2FA atualizado para " + novoLimite + " acesso(s).");
+        }
+
         return "redirect:/usuarios/" + id + "/editar";
     }
 }

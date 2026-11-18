@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.UUID;
 
 @Entity
 @Table(name = "usuarios")
@@ -16,8 +17,8 @@ import java.util.Set;
 public class Usuario {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
 
     @Column(nullable = false)
     private String nomeCompleto;
@@ -29,13 +30,19 @@ public class Usuario {
     private String senha;
 
     @Column(nullable = false)
-    private String perfil; // Ex: ROLE_GERAL, ROLE_SISTEMA, ROLE_USER
+    private String perfil;
 
     @Column(name = "secret_2fa")
     private String secret2fa;
 
     @Column(name = "mfa_ativo", nullable = false)
     private boolean mfaAtivo = false;
+
+    @Column(name = "acessos_sem_mfa")
+    private Integer acessosSemMfa = 0;
+
+    @Column(name = "limite_acessos_sem_mfa")
+    private Integer limiteAcessosSemMfa = 3;
 
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "usuario_unidades", joinColumns = @JoinColumn(name = "usuario_id"))

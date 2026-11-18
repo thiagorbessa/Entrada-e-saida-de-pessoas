@@ -25,6 +25,10 @@
             <span th:text="${erro}"></span>
         </div>
 
+        <div th:if="${param.bloqueado}" class="alert alert-erro">
+            <span>Você atingiu o limite de 3 acessos sem verificação em duas etapas. Ative o 2FA abaixo para liberar o acesso ao sistema.</span>
+        </div>
+
         <!-- MODO 1: 2FA AINDA NÃO ATIVADO (EXIBE QR CODE) -->
         <div th:if="${!mfaAtivo}">
             <ol style="color: #495057; line-height: 1.7; padding-left: 20px; margin-bottom: 20px;">

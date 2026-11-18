@@ -7,12 +7,13 @@ import lombok.Setter;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.UUID;
 
 @Getter
 @Setter
 public class UsuarioRequestDTO {
 
-    private Long id;
+    private UUID id;
 
     @NotBlank(message = "O nome completo é obrigatório")
     private String nomeCompleto;

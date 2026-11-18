@@ -27,7 +27,7 @@ public class UsuarioService {
         return usuarioRepository.findAll();
     }
 
-    public Usuario buscarPorId(Long id) {
+    public Usuario buscarPorId(UUID id) {
         return usuarioRepository.findById(id)
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Usuário não encontrado."));
     }
@@ -97,14 +97,13 @@ public class UsuarioService {
 
         // Registra a auditoria após salvar
         String acao = isEdicao ? "EDICAO" : "CRIACAO";
-        UUID uuidLog = usuarioSalvo.getId() != null ? UUID.nameUUIDFromBytes(usuarioSalvo.getId().toString().getBytes()) : null;
-        auditoriaService.registrar(usuarioLogado, acao, "USUARIO", uuidLog, usuarioSalvo.getNomeCompleto(), detalhesAuditoria);
+        auditoriaService.registrar(usuarioLogado, acao, "USUARIO", usuarioSalvo.getId(), usuarioSalvo.getNomeCompleto(), detalhesAuditoria);
 
         return usuarioSalvo;
     }
 
     @Transactional
-    public void deletar(Long id, Usuario usuarioLogado) {
+    public void deletar(UUID id, Usuario usuarioLogado) {
         Usuario usuario = buscarPorId(id);
 
         // Impede que o usuário delete a si mesmo
@@ -112,9 +111,8 @@ public class UsuarioService {
             throw new AcessoNegadoException("Você não pode excluir o seu próprio usuário.");
         }
 
-        UUID uuidLog = usuario.getId() != null ? UUID.nameUUIDFromBytes(usuario.getId().toString().getBytes()) : null;
         auditoriaService.registrar(usuarioLogado, "EXCLUSAO", "USUARIO",
-                uuidLog, usuario.getNomeCompleto(),
+                usuario.getId(), usuario.getNomeCompleto(),
                 "Excluiu o registo do utilizador");
 
         usuarioRepository.delete(usuario);
