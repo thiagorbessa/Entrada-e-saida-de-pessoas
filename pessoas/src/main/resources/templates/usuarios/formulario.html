@@ -94,15 +94,62 @@
                 <button type="button" id="limpar" class="btn btn-limpar">Limpar</button>
             </div>
         </form>
+
+        <!-- Painel de Controle do 2FA e Contagem de Acessos (Apenas Administrador Geral) -->
         <div th:if="${usuario.id != null and isGeralLogado}"
+             th:with="userEntity=${usuarioEntity != null ? usuarioEntity : @usuarioRepository.findById(usuario.id).orElse(null)}"
              style="margin-top: 25px; padding-top: 20px; border-top: 1px solid #edf2f7;">
+
+            <h3 style="font-size: 1.05rem; margin-bottom: 12px; color: #2d3748;">
+                Controle de Autenticação em Duas Etapas (2FA)
+            </h3>
+
             <div th:if="${sucesso}" class="alert alert-sucesso">
                 <span th:text="${sucesso}"></span>
             </div>
-            <form th:action="@{/2fa/resetar/{id}(id=${usuario.id})}" method="post"
-                  onsubmit="return confirm('Deseja realmente resetar a autenticação em duas etapas deste usuário?');">
-                <button type="submit" class="btn btn-perigo">Resetar Autenticação 2FA deste Usuário</button>
+
+            <div th:if="${userEntity != null}"
+                 style="background: #f8f9fa; border: 1px solid #e2e8f0; border-radius: 6px; padding: 14px; margin-bottom: 15px;">
+                <p style="margin: 0 0 6px 0;">
+                    <strong>Status do 2FA:</strong>
+                    <span th:if="${userEntity.mfaAtivo}" style="color: #198754; font-weight: 700;">Ativo</span>
+                    <span th:unless="${userEntity.mfaAtivo}" style="color: #dc3545; font-weight: 700;">Inativo</span>
+                </p>
+                <p style="margin: 0;"
+                   th:with="acessos=${userEntity.acessosSemMfa != null ? userEntity.acessosSemMfa : 0},
+                            limite=${userEntity.limiteAcessosSemMfa != null ? userEntity.limiteAcessosSemMfa : 3}">
+                    <strong>Acessos realizados sem 2FA:</strong>
+                    <span th:text="${acessos}">0</span> de <span th:text="${limite}">3</span> permitido(s)
+                    <span th:if="${!userEntity.mfaAtivo and acessos > limite}"
+                          style="color: #dc3545; font-weight: 700;"> (Bloqueado)</span>
+                </p>
+            </div>
+
+            <!-- Alterar limite máximo permitido -->
+            <form th:action="@{/2fa/gerenciar-acessos/{id}(id=${usuario.id})}" method="post"
+                  style="display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 15px;">
+                <input type="hidden" name="acao" value="alterarLimite" />
+                <div class="form-group" style="margin: 0;">
+                    <label for="novoLimite" style="font-size: 0.9rem;">Limite de acessos sem 2FA:</label>
+                    <input type="number" id="novoLimite" name="novoLimite" min="0" max="99" required
+                           th:value="${userEntity != null and userEntity.limiteAcessosSemMfa != null ? userEntity.limiteAcessosSemMfa : 3}"
+                           class="form-control" style="width: 120px;" />
+                </div>
+                <button type="submit" class="btn btn-salvar">Salvar Novo Limite</button>
             </form>
+
+            <!-- Zerar contagem ou Resetar 2FA -->
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <form th:action="@{/2fa/gerenciar-acessos/{id}(id=${usuario.id})}" method="post">
+                    <input type="hidden" name="acao" value="zerar" />
+                    <button type="submit" class="btn btn-consulta">Zerar Contagem de Acessos (0)</button>
+                </form>
+
+                <form th:action="@{/2fa/resetar/{id}(id=${usuario.id})}" method="post"
+                      onsubmit="return confirm('Deseja realmente resetar a autenticação em duas etapas e zerar a contagem deste usuário?');">
+                    <button type="submit" class="btn btn-perigo">Resetar Autenticação 2FA deste Usuário</button>
+                </form>
+            </div>
         </div>
     </div>
 
