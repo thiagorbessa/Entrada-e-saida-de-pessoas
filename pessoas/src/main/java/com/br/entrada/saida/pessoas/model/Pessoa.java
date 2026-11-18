@@ -7,9 +7,6 @@ import lombok.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Table;
-import jakarta.persistence.Index; // <--- O IMPORT CORRETO DO JPA
 
 @Entity
 @Table(name = "pessoas", indexes = {
@@ -56,8 +53,27 @@ public class Pessoa {
 	@JoinColumn(name = "usuario_id")
 	private Usuario usuarioResponsavel;
 
+	@Column(name = "usuario_responsavel_nome")
+	private String usuarioResponsavelNome;
+
+	@Column(name = "usuario_responsavel_cpf")
+	private String usuarioResponsavelCpf;
+
 	@Transient
 	public boolean isNovo() {
 		return id == null;
+	}
+
+	@Transient
+	public String getOperadorResponsavelNome() {
+		if (usuarioResponsavel != null && usuarioResponsavel.getNomeCompleto() != null) {
+			return usuarioResponsavel.getNomeCompleto();
+		}
+		if (usuarioResponsavelNome != null && !usuarioResponsavelNome.isBlank()) {
+			return usuarioResponsavelCpf != null && !usuarioResponsavelCpf.isBlank()
+					? usuarioResponsavelNome + " (CPF: " + usuarioResponsavelCpf + ")"
+					: usuarioResponsavelNome;
+		}
+		return "Sistema (Antigo)";
 	}
 }
