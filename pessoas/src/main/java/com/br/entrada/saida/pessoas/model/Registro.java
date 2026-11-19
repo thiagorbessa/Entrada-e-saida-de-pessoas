@@ -47,6 +47,18 @@ public class Registro {
     @JoinColumn(name = "pessoa_id")
     private Pessoa pessoa;
 
+    @Column(name = "usuario_entrada_nome")
+    private String usuarioEntradaNome;
+
+    @Column(name = "usuario_entrada_cpf")
+    private String usuarioEntradaCpf;
+
+    @Column(name = "usuario_saida_nome")
+    private String usuarioSaidaNome;
+
+    @Column(name = "usuario_saida_cpf")
+    private String usuarioSaidaCpf;
+
     // ==========================================
     // MÉTODOS DE CONVENIÊNCIA PARA O HISTÓRICO
     // ==========================================
@@ -55,12 +67,22 @@ public class Registro {
         if (usuarioEntrada != null && usuarioEntrada.getNomeCompleto() != null) {
             return usuarioEntrada.getNomeCompleto();
         }
+        if (usuarioEntradaNome != null && !usuarioEntradaNome.isBlank()) {
+            return usuarioEntradaCpf != null && !usuarioEntradaCpf.isBlank()
+                    ? usuarioEntradaNome + " (CPF: " + usuarioEntradaCpf + ")"
+                    : usuarioEntradaNome;
+        }
         return "-";
     }
 
     public String getOperadorSaidaNome() {
         if (usuarioSaida != null && usuarioSaida.getNomeCompleto() != null) {
             return usuarioSaida.getNomeCompleto();
+        }
+        if (usuarioSaidaNome != null && !usuarioSaidaNome.isBlank()) {
+            return usuarioSaidaCpf != null && !usuarioSaidaCpf.isBlank()
+                    ? usuarioSaidaNome + " (CPF: " + usuarioSaidaCpf + ")"
+                    : usuarioSaidaNome;
         }
         return "-";
     }

@@ -34,7 +34,7 @@
                        placeholder="Filtrar por nome, CPF, leito, unidade ou paciente..." autocomplete="off" />
                 <a id="limpar-busca-internacao" class="btn-busca-limpar" href="javascript:void(0)">Limpar</a>
                 <button type="button" class="btn btn-salvar" onclick="abrirModal('modalNovoPaciente')">+ Novo Paciente</button>
-                <button type="button" class="btn-novo" onclick="abrirModal('modalNovoAcompanhante')">+ Novo Acompanhante</button>
+                <button type="button" class="btn-novo" onclick="abrirModalNovoAcompanhante()">+ Novo Acompanhante</button>
             </div>
         </div>
 
@@ -121,8 +121,8 @@
 
                     <td class="td-obs" data-label="Observação">
                         <span th:text="${pac.observacao != null && !pac.observacao.isBlank() ? pac.observacao : '-'}"></span>
-                        <div th:if="${pac.limiteDiarioEfetivo != 5}" style="margin-top: 4px; font-size: 0.78rem; color: var(--cor-primaria-esc); font-weight: 600;">
-                            <span th:text="${pac.limiteDiarioIlimitado ? 'Acomp./dia: Ilimitado (00)' : 'Acomp./dia: ' + pac.limiteDiarioEfetivo}"></span>
+                        <div th:if="${pac.limiteTotalEfetivo != 5}" style="margin-top: 4px; font-size: 0.78rem; color: var(--cor-primaria-esc); font-weight: 600;">
+                            <span th:text="${pac.limiteTotalIlimitado ? 'Acomp. total: Ilimitado (00)' : 'Acomp. total: ' + pac.limiteTotalEfetivo}"></span>
                             <span th:if="${pac.autorizadoPor != null && !pac.autorizadoPor.isBlank()}"
                                   style="display: block; font-weight: normal; color: #555;"
                                   th:text="'Aut.: ' + ${pac.autorizadoPor}"></span>
@@ -164,7 +164,8 @@
                            th:data-andar="${pac.andar}"
                            th:data-leito="${pac.leito}"
                            th:data-observacao="${pac.observacao}"
-                           th:data-limite="${pac.limiteDiarioEfetivo}"
+                           th:data-limite="${pac.limiteTotalEfetivo}"
+                           th:data-simultaneos="${pac.limiteSimultaneosEfetivo}"
                            th:data-autorizado="${pac.autorizadoPor}"
                            onclick="abrirModalEditarPaciente(this)">Editar</a>
                     </td>
@@ -376,10 +377,23 @@
             <div sec:authorize="hasAnyRole('SISTEMA', 'GERAL')" class="full-width"
                  style="grid-column: 1 / -1; background: #f8f9fa; padding: 12px; border-radius: 6px; border: 1px solid #dee2e6; margin-top: 6px;">
                 <div class="form-group mb-15">
-                    <label for="limiteDiarioPaciente">Qual a capacidade de acompanhantes diários esse paciente passa a ter?</label>
+                    <label for="limiteSimultaneosPaciente">Quantos acompanhantes podem estar presentes ao mesmo tempo?</label>
                     <input type="text"
-                           id="limiteDiarioPaciente"
-                           name="limiteDiarioAcompanhantes"
+                           id="limiteSimultaneosPaciente"
+                           name="limiteSimultaneosAcompanhantes"
+                           inputmode="numeric"
+                           pattern="[0-9]*"
+                           value="1"
+                           placeholder="Ex: 1 (digite 00 para ilimitado)"
+                           class="form-control" />
+                    <small style="color: #666; font-size: 0.8rem;">Padrão: 1. Digite <strong>00</strong> (ou 0) para ilimitado.</small>
+                </div>
+
+                <div class="form-group mb-15">
+                    <label for="limiteTotalPaciente">Quantos acompanhantes no total podem ser cadastrados para este paciente?</label>
+                    <input type="text"
+                           id="limiteTotalPaciente"
+                           name="limiteTotalAcompanhantes"
                            inputmode="numeric"
                            pattern="[0-9]*"
                            value="5"
@@ -491,10 +505,23 @@
             <div sec:authorize="hasAnyRole('SISTEMA', 'GERAL')" class="full-width"
                  style="grid-column: 1 / -1; background: #f8f9fa; padding: 12px; border-radius: 6px; border: 1px solid #dee2e6; margin-top: 6px;">
                 <div class="form-group mb-15">
-                    <label for="editPacLimiteDiario">Qual a capacidade de acompanhantes diários esse paciente passa a ter?</label>
+                    <label for="editPacLimiteSimultaneos">Quantos acompanhantes podem estar presentes ao mesmo tempo?</label>
                     <input type="text"
-                           id="editPacLimiteDiario"
-                           name="limiteDiarioAcompanhantes"
+                           id="editPacLimiteSimultaneos"
+                           name="limiteSimultaneosAcompanhantes"
+                           inputmode="numeric"
+                           pattern="[0-9]*"
+                           value="1"
+                           placeholder="Ex: 1 (digite 00 para ilimitado)"
+                           class="form-control" />
+                    <small style="color: #666; font-size: 0.8rem;">Padrão: 1. Digite <strong>00</strong> (ou 0) para ilimitado.</small>
+                </div>
+
+                <div class="form-group mb-15">
+                    <label for="editPacLimiteTotal">Quantos acompanhantes no total podem ser cadastrados para este paciente?</label>
+                    <input type="text"
+                           id="editPacLimiteTotal"
+                           name="limiteTotalAcompanhantes"
                            inputmode="numeric"
                            pattern="[0-9]*"
                            value="5"
@@ -531,9 +558,16 @@
 
         <form th:action="@{/internacao/acompanhante}" method="post" class="form-grid form-limpar-cpf">
             <div class="form-group full-width">
-                <label>Paciente Internado Vinculado <span class="obrigatorio">*</span></label>
-                <select name="pacienteId" id="selectPacienteAcomp" class="form-control" required onchange="preencherLocalPaciente(this)">
-                    <option value="">Selecione o paciente internado...</option>
+                <label for="selectPacienteAcomp">Paciente Internado Vinculado <span class="obrigatorio">*</span></label>
+
+                <input type="text" id="filtroNovoAcomp" class="form-control"
+                       placeholder="Digite o nome ou CPF para filtrar a lista abaixo..."
+                       style="margin-bottom: 8px;"
+                       autocomplete="off"
+                       onkeyup="filtrarPacientesSelect('filtroNovoAcomp', 'selectPacienteAcomp')" />
+
+                <select name="pacienteId" id="selectPacienteAcomp" class="form-control" required size="5" onchange="preencherLocalPaciente(this)">
+                    <option value="" disabled selected>Selecione o paciente internado...</option>
                     <option th:each="pac : ${pacientes}"
                             th:if="${pac.internadoAtivo}"
                             th:value="${pac.id}"
@@ -562,20 +596,26 @@
 
             <div class="form-group">
                 <label>Unidade <span class="obrigatorio">*</span></label>
-                <select name="unidade" id="novoAcompUnidade" class="form-control" required>
-                    <option value="">Selecione a unidade...</option>
+                <select name="unidade" id="novoAcompUnidade" class="form-control" required
+                        tabindex="-1"
+                        style="pointer-events: none; background-color: #e9ecef; color: #495057;">
+                    <option value="">Preenchido pelo paciente...</option>
                     <option th:each="u : ${unidades}" th:value="${u}" th:text="${u}"></option>
                 </select>
             </div>
 
             <div class="form-group">
                 <label>Andar <span class="obrigatorio">*</span></label>
-                <input type="text" name="andar" id="novoAcompAndar" class="form-control" required />
+                <input type="text" name="andar" id="novoAcompAndar" class="form-control"
+                       readonly required
+                       style="background-color: #e9ecef; color: #495057; cursor: not-allowed;" />
             </div>
 
             <div class="form-group">
                 <label>Leito <span class="obrigatorio">*</span></label>
-                <input type="text" name="leito" id="novoAcompLeito" class="form-control" required />
+                <input type="text" name="leito" id="novoAcompLeito" class="form-control"
+                       readonly required
+                       style="background-color: #e9ecef; color: #495057; cursor: not-allowed;" />
             </div>
 
             <div class="modal-actions full-width">
@@ -598,11 +638,22 @@
             <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
 
             <div class="form-group full-width">
-                <label>Paciente Internado Vinculado <span class="obrigatorio">*</span></label>
-                <select id="editAcompPaciente" name="pacienteId" class="form-control" required>
-                    <option value="">Selecione o paciente...</option>
+                <label for="editAcompPaciente">Paciente Internado Vinculado <span class="obrigatorio">*</span></label>
+
+                <input type="text" id="filtroEditAcomp" class="form-control"
+                       placeholder="Digite o nome ou CPF para filtrar a lista abaixo..."
+                       style="margin-bottom: 8px;"
+                       autocomplete="off"
+                       onkeyup="filtrarPacientesSelect('filtroEditAcomp', 'editAcompPaciente')" />
+
+                <select id="editAcompPaciente" name="pacienteId" class="form-control" required size="5"
+                        onchange="preencherLocalPacienteEditar(this)">
+                    <option value="" disabled>Selecione um paciente...</option>
                     <option th:each="pac : ${pacientes}"
                             th:value="${pac.id}"
+                            th:data-unidade="${pac.unidade}"
+                            th:data-andar="${pac.andar}"
+                            th:data-leito="${pac.leito}"
                             th:text="${pac.nome + ' (CPF: ' + pac.cpf + ')'}">
                     </option>
                 </select>
@@ -625,20 +676,26 @@
 
             <div class="form-group">
                 <label>Unidade <span class="obrigatorio">*</span></label>
-                <select id="editAcompUnidade" name="unidade" class="form-control" required>
-                    <option value="">Selecione a unidade...</option>
+                <select id="editAcompUnidade" name="unidade" class="form-control" required
+                        tabindex="-1"
+                        style="pointer-events: none; background-color: #e9ecef; color: #495057;">
+                    <option value="">Preenchido pelo paciente...</option>
                     <option th:each="u : ${unidades}" th:value="${u}" th:text="${u}"></option>
                 </select>
             </div>
 
             <div class="form-group">
                 <label>Andar <span class="obrigatorio">*</span></label>
-                <input type="text" id="editAcompAndar" name="andar" class="form-control" required />
+                <input type="text" id="editAcompAndar" name="andar" class="form-control"
+                       readonly required
+                       style="background-color: #e9ecef; color: #495057; cursor: not-allowed;" />
             </div>
 
             <div class="form-group">
                 <label>Leito <span class="obrigatorio">*</span></label>
-                <input type="text" id="editAcompLeito" name="leito" class="form-control" required />
+                <input type="text" id="editAcompLeito" name="leito" class="form-control"
+                       readonly required
+                       style="background-color: #e9ecef; color: #495057; cursor: not-allowed;" />
             </div>
 
             <div class="modal-actions full-width">
@@ -660,12 +717,49 @@
         document.getElementById(id).style.display = 'none';
     }
 
+    function filtrarPacientesSelect(inputId, selectId) {
+        const input = document.getElementById(inputId);
+        const select = document.getElementById(selectId);
+        if (!input || !select) return;
+
+        const filtro = input.value.toUpperCase().trim();
+        const opcoes = select.getElementsByTagName('option');
+
+        for (let i = 0; i < opcoes.length; i++) {
+            if (opcoes[i].value === '') continue;
+
+            const textoOpcao = opcoes[i].textContent || opcoes[i].innerText;
+            if (textoOpcao.toUpperCase().indexOf(filtro) > -1) {
+                opcoes[i].style.display = '';
+            } else {
+                opcoes[i].style.display = 'none';
+            }
+        }
+    }
+
+    function abrirModalNovoAcompanhante() {
+        const inputFiltro = document.getElementById('filtroNovoAcomp');
+        if (inputFiltro) {
+            inputFiltro.value = '';
+            filtrarPacientesSelect('filtroNovoAcomp', 'selectPacienteAcomp');
+        }
+        abrirModal('modalNovoAcompanhante');
+    }
+
     function preencherLocalPaciente(selectEl) {
         const opt = selectEl.options[selectEl.selectedIndex];
         if (!opt || !opt.value) return;
         document.getElementById('novoAcompUnidade').value = opt.getAttribute('data-unidade') || '';
         document.getElementById('novoAcompAndar').value = opt.getAttribute('data-andar') || '';
         document.getElementById('novoAcompLeito').value = opt.getAttribute('data-leito') || '';
+    }
+
+    function preencherLocalPacienteEditar(selectEl) {
+        const opt = selectEl.options[selectEl.selectedIndex];
+        if (!opt || !opt.value) return;
+        document.getElementById('editAcompUnidade').value = opt.getAttribute('data-unidade') || '';
+        document.getElementById('editAcompAndar').value = opt.getAttribute('data-andar') || '';
+        document.getElementById('editAcompLeito').value = opt.getAttribute('data-leito') || '';
     }
 
     function abrirModalSaidaPaciente(btn) {
@@ -689,8 +783,13 @@
         document.getElementById('editPacLeito').value = el.getAttribute('data-leito') || '';
         document.getElementById('editPacObservacao').value = el.getAttribute('data-observacao') || '';
 
-        const campoLimite = document.getElementById('editPacLimiteDiario');
+        const campoSimultaneos = document.getElementById('editPacLimiteSimultaneos');
+        const campoLimite = document.getElementById('editPacLimiteTotal');
         const campoAutorizado = document.getElementById('editPacAutorizadoPor');
+        if (campoSimultaneos) {
+            const sim = el.getAttribute('data-simultaneos');
+            campoSimultaneos.value = (sim === '0') ? '00' : (sim || '1');
+        }
         if (campoLimite) {
             const lim = el.getAttribute('data-limite');
             campoLimite.value = (lim === '0') ? '00' : (lim || '5');
@@ -705,6 +804,12 @@
     function abrirModalEditarAcompanhante(el) {
         const base = contextPath.endsWith('/') ? contextPath : contextPath + '/';
         const id = el.getAttribute('data-id');
+
+        const inputFiltro = document.getElementById('filtroEditAcomp');
+        if (inputFiltro) {
+            inputFiltro.value = '';
+            filtrarPacientesSelect('filtroEditAcomp', 'editAcompPaciente');
+        }
 
         document.getElementById('formEditarAcompanhante').action = base + 'internacao/acompanhante/editar/' + id;
         document.getElementById('editAcompPaciente').value = el.getAttribute('data-paciente-id') || '';

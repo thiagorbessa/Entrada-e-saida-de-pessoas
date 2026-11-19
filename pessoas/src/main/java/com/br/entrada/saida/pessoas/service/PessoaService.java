@@ -151,6 +151,11 @@ public class PessoaService {
         pessoa.setObservacao(dto.getObservacao());
         pessoa.setUsuarioResponsavel(usuarioLogado);
 
+        if (usuarioLogado != null) {
+            pessoa.setUsuarioResponsavelNome(usuarioLogado.getNomeCompleto());
+            pessoa.setUsuarioResponsavelCpf(usuarioLogado.getCpf());
+        }
+
         pessoaRepository.save(pessoa);
 
         String acao = isEdicao ? "EDICAO" : "CRIACAO";

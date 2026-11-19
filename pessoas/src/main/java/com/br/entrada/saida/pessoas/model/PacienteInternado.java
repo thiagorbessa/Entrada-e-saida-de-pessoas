@@ -99,17 +99,35 @@ public class PacienteInternado {
         return id == null;
     }
 
-    @Column(name = "limite_diario_acompanhantes")
-    private Integer limiteDiarioAcompanhantes = 5;
+    @Column(name = "limite_simultaneos_acompanhantes")
+    private Integer limiteSimultaneosAcompanhantes = 1;
+
+    @Column(name = "limite_total_acompanhantes")
+    private Integer limiteTotalAcompanhantes = 5;
 
     @Column(name = "autorizado_por", length = 200)
     private String autorizadoPor;
 
-    public int getLimiteDiarioEfetivo() {
-        return limiteDiarioAcompanhantes != null ? limiteDiarioAcompanhantes : 5;
+    public int getLimiteSimultaneosEfetivo() {
+        return limiteSimultaneosAcompanhantes != null ? limiteSimultaneosAcompanhantes : 1;
     }
 
+    public int getLimiteTotalEfetivo() {
+        return limiteTotalAcompanhantes != null ? limiteTotalAcompanhantes : 5;
+    }
+
+    public boolean isLimiteTotalIlimitado() {
+        return getLimiteTotalEfetivo() == 0;
+    }
+
+    // Compatibilidade com views existentes
+    @Transient
+    public int getLimiteDiarioEfetivo() {
+        return getLimiteTotalEfetivo();
+    }
+
+    @Transient
     public boolean isLimiteDiarioIlimitado() {
-        return getLimiteDiarioEfetivo() == 0;
+        return isLimiteTotalIlimitado();
     }
 }

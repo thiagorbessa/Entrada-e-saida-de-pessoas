@@ -56,46 +56,67 @@ public class InternacaoService {
                 || "GERAL".equals(perfil) || "SISTEMA".equals(perfil);
     }
 
-    private void aplicarConfiguracaoLimiteDiario(PacienteInternado paciente, PacienteInternadoRecord dto, Usuario operador) {
+    private void aplicarConfiguracaoLimites(PacienteInternado paciente, PacienteInternadoRecord dto, Usuario operador) {
+        // Configura limite simultâneo (padrão 1)
+        if (podeAlterarLimiteAcompanhantes(operador)) {
+            Integer novoSimultaneo = dto.limiteSimultaneosAcompanhantes();
+            if (novoSimultaneo != null && novoSimultaneo >= 0) {
+                paciente.setLimiteSimultaneosAcompanhantes(novoSimultaneo);
+            } else {
+                if (paciente.getLimiteSimultaneosAcompanhantes() == null) {
+                    paciente.setLimiteSimultaneosAcompanhantes(1);
+                }
+            }
+        } else {
+            if (paciente.getLimiteSimultaneosAcompanhantes() == null) {
+                paciente.setLimiteSimultaneosAcompanhantes(1);
+            }
+        }
+
+        // Configura limite total de acompanhantes cadastrados (padrão 5)
         if (!podeAlterarLimiteAcompanhantes(operador)) {
-            if (paciente.getLimiteDiarioAcompanhantes() == null) {
-                paciente.setLimiteDiarioAcompanhantes(5);
+            if (paciente.getLimiteTotalAcompanhantes() == null) {
+                paciente.setLimiteTotalAcompanhantes(5);
             }
             return;
         }
 
-        Integer novoLimite = dto.limiteDiarioAcompanhantes();
+        Integer novoLimite = dto.limiteTotalAcompanhantes();
+        // Compatibilidade: se só veio limiteDiarioAcompanhantes (legacy), usa esse valor
+        if (novoLimite == null && dto.limiteDiarioAcompanhantes() != null) {
+            novoLimite = dto.limiteDiarioAcompanhantes();
+        }
         if (novoLimite == null) {
-            if (paciente.getLimiteDiarioAcompanhantes() == null) {
-                paciente.setLimiteDiarioAcompanhantes(5);
+            if (paciente.getLimiteTotalAcompanhantes() == null) {
+                paciente.setLimiteTotalAcompanhantes(5);
             }
             return;
         }
 
         if (novoLimite < 0) {
-            throw new IllegalArgumentException("A capacidade de acompanhantes diários não pode ser negativa.");
+            throw new IllegalArgumentException("O limite total de acompanhantes não pode ser negativo.");
         }
 
         if (novoLimite != 5) {
             if (dto.autorizadoPor() == null || dto.autorizadoPor().trim().isBlank()) {
-                throw new IllegalArgumentException("Informe o nome e o cargo de quem autorizou a alteração do limite diário de acompanhantes.");
+                throw new IllegalArgumentException("Informe o nome e o cargo de quem autorizou a alteração do limite total de acompanhantes.");
             }
-            paciente.setLimiteDiarioAcompanhantes(novoLimite);
+            paciente.setLimiteTotalAcompanhantes(novoLimite);
             paciente.setAutorizadoPor(dto.autorizadoPor().trim());
         } else {
-            paciente.setLimiteDiarioAcompanhantes(5);
+            paciente.setLimiteTotalAcompanhantes(5);
             paciente.setAutorizadoPor(null);
         }
     }
 
     private String formatarDescricaoLimite(PacienteInternado paciente) {
-        int lim = paciente.getLimiteDiarioEfetivo();
+        int lim = paciente.getLimiteTotalEfetivo();
         if (lim == 5) return "";
-        String cap = (lim == 0) ? "Ilimitado (00)" : lim + "/dia";
+        String cap = (lim == 0) ? "Ilimitado (00)" : lim + " total";
         String aut = (paciente.getAutorizadoPor() != null && !paciente.getAutorizadoPor().isBlank())
                 ? " | Autorizado por: " + paciente.getAutorizadoPor()
                 : "";
-        return " | Capacidade diária: " + cap + aut;
+        return " | Limite total de acompanhantes: " + cap + aut;
     }
 
     @Transactional(readOnly = true)
@@ -136,22 +157,23 @@ public class InternacaoService {
             throw new IllegalStateException("Acesso bloqueado: O paciente vinculado já recebeu Alta ou Óbito e não está internado.");
         }
 
-        // Máximo de 2 acompanhantes simultâneos (sem saída registrada)
-        long simultaneos = acompanhanteRepository.countByPacienteAndHoraSaidaIsNull(paciente);
-        if (simultaneos >= 2) {
-            throw new IllegalStateException("Acesso bloqueado: O paciente já possui 2 acompanhantes ativos no momento. Registre uma saída antes de liberar nova entrada.");
+        // Máximo de acompanhantes simultâneos conforme configuração do paciente (padrão 1)
+        int limiteSimultaneos = paciente.getLimiteSimultaneosEfetivo();
+        if (limiteSimultaneos > 0) {
+            long simultaneos = acompanhanteRepository.countByPacienteAndHoraSaidaIsNull(paciente);
+            if (simultaneos >= limiteSimultaneos) {
+                throw new IllegalStateException("Acesso bloqueado: O paciente já possui " + limiteSimultaneos + " acompanhante(s) ativo(s) no momento. Registre uma saída antes de liberar nova entrada.");
+            }
         }
 
-        // Máximo de entradas de acompanhantes no mesmo dia para este paciente (0 = ilimitado, padrão = 5)
-        int limiteDiario = paciente.getLimiteDiarioEfetivo();
-        if (limiteDiario > 0) {
-            LocalDateTime inicioDoDia = LocalDate.now().atStartOfDay();
-            LocalDateTime fimDoDia = LocalDate.now().atTime(LocalTime.MAX);
-            long acessosNoDia = acompanhanteRepository.countByPacienteAndHoraEntradaBetween(paciente, inicioDoDia, fimDoDia);
+        // Limite total de acompanhantes cadastrados para este paciente (0 = ilimitado, padrão = 5)
+        int limiteTotal = paciente.getLimiteTotalEfetivo();
+        if (limiteTotal > 0) {
+            long totalCadastrados = acompanhanteRepository.countByPaciente(paciente);
 
-            if (acessosNoDia >= limiteDiario) {
-                throw new IllegalStateException("Acesso bloqueado: Limite diário de " + limiteDiario
-                        + " entradas de acompanhantes atingido para este paciente.");
+            if (totalCadastrados >= limiteTotal) {
+                throw new IllegalStateException("Acesso bloqueado: Limite total de " + limiteTotal
+                        + " acompanhantes cadastrados atingido para este paciente.");
             }
         }
     }
@@ -184,7 +206,7 @@ public class InternacaoService {
             existente.setAndar(dto.andar());
             existente.setLeito(dto.leito());
             existente.setObservacao(dto.observacao());
-            aplicarConfiguracaoLimiteDiario(existente, dto, operador);
+            aplicarConfiguracaoLimites(existente, dto, operador);
             existente.setStatus(StatusInternacao.INTERNADO);
             existente.setHoraEntrada(LocalDateTime.now());
             existente.setHoraSaida(null);
@@ -209,7 +231,7 @@ public class InternacaoService {
         paciente.setAndar(dto.andar());
         paciente.setLeito(dto.leito());
         paciente.setObservacao(dto.observacao());
-        aplicarConfiguracaoLimiteDiario(paciente, dto, operador);
+        aplicarConfiguracaoLimites(paciente, dto, operador);
         paciente.setStatus(StatusInternacao.INTERNADO);
         paciente.setHoraEntrada(LocalDateTime.now());
         paciente.setUsuarioEntrada(operador);
@@ -452,7 +474,7 @@ public class InternacaoService {
             });
         }
 
-        int limiteAnterior = paciente.getLimiteDiarioEfetivo();
+        int limiteAnterior = paciente.getLimiteTotalEfetivo();
         String autorizacaoAnterior = paciente.getAutorizadoPor();
 
         paciente.setNome(dto.nome());
@@ -462,7 +484,7 @@ public class InternacaoService {
         paciente.setAndar(dto.andar());
         paciente.setLeito(dto.leito());
         paciente.setObservacao(dto.observacao());
-        aplicarConfiguracaoLimiteDiario(paciente, dto, operador);
+        aplicarConfiguracaoLimites(paciente, dto, operador);
 
         StringBuilder detalhes = new StringBuilder(String.format(
                 "Edição | Nome: '%s' -> '%s' | CPF: '%s' -> '%s' | Unidade: %s -> %s | Andar: '%s' -> '%s' | Leito: '%s' -> '%s'",
@@ -473,7 +495,7 @@ public class InternacaoService {
                 paciente.getLeito(), dto.leito()
         ));
 
-        if (limiteAnterior != paciente.getLimiteDiarioEfetivo()
+        if (limiteAnterior != paciente.getLimiteTotalEfetivo()
                 || (paciente.getAutorizadoPor() != null && !paciente.getAutorizadoPor().equals(autorizacaoAnterior))) {
             detalhes.append(formatarDescricaoLimite(paciente));
         }

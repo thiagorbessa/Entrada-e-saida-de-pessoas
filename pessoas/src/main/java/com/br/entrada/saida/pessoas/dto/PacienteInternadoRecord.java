@@ -13,6 +13,8 @@ public record PacienteInternadoRecord(
         @NotBlank(message = "Andar é obrigatório") String andar,
         @NotBlank(message = "Leito é obrigatório") String leito,
         String observacao,
-        @Min(value = 0, message = "A capacidade diária deve ser 0 (ilimitado) ou maior") Integer limiteDiarioAcompanhantes,
-        String autorizadoPor
+        @Min(value = 0, message = "O limite de acompanhantes simultâneos deve ser 0 (ilimitado) ou maior") Integer limiteSimultaneosAcompanhantes,
+        @Min(value = 0, message = "O limite total de acompanhantes deve ser 0 (ilimitado) ou maior") Integer limiteTotalAcompanhantes,
+        String autorizadoPor,
+        @Min(value = 0, message = "A capacidade diária deve ser 0 (ilimitado) ou maior") Integer limiteDiarioAcompanhantes
 ) {}

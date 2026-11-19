@@ -14,6 +14,7 @@ import java.util.UUID;
 public interface AcompanhanteRepository extends JpaRepository<Acompanhante, UUID> {
     long countByPacienteAndHoraSaidaIsNull(PacienteInternado paciente);
     long countByPacienteAndHoraEntradaBetween(PacienteInternado paciente, LocalDateTime inicioDia, LocalDateTime fimDia);
+    long countByPaciente(PacienteInternado paciente);
     boolean existsByCpfAndHoraSaidaIsNull(String cpf);
     Optional<Acompanhante> findFirstByCpfAndPacienteIdOrderByHoraEntradaDesc(String cpf, UUID pacienteId);
     List<Acompanhante> findAllByOrderByHoraEntradaDesc();

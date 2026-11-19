@@ -8,6 +8,7 @@ import com.br.entrada.saida.pessoas.exception.RegraNegocioException;
 import com.br.entrada.saida.pessoas.model.Usuario;
 import com.br.entrada.saida.pessoas.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +23,7 @@ public class UsuarioService {
     private final UsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuditoriaService auditoriaService;
+    private final JdbcTemplate jdbcTemplate;
 
     public List<Usuario> listarTodos() {
         return usuarioRepository.findAll();
@@ -111,11 +113,64 @@ public class UsuarioService {
             throw new AcessoNegadoException("Você não pode excluir o seu próprio usuário.");
         }
 
-        auditoriaService.registrar(usuarioLogado, "EXCLUSAO", "USUARIO",
-                usuario.getId(), usuario.getNomeCompleto(),
-                "Excluiu o registo do utilizador");
+        String idStr = id.toString();
 
+        // 1. Preserva o nome e CPF nos cadastros de pessoas e registros de entrada/saída antes de desvincular
+        jdbcTemplate.update(
+                "UPDATE pessoas SET usuario_responsavel_nome = ?, usuario_responsavel_cpf = ? " +
+                        "WHERE usuario_id = ? OR usuario_id = UNHEX(REPLACE(?, '-', ''))",
+                usuario.getNomeCompleto(), usuario.getCpf(), idStr, idStr
+        );
+        jdbcTemplate.update(
+                "UPDATE registros SET usuario_entrada_nome = ?, usuario_entrada_cpf = ? " +
+                        "WHERE usuario_entrada_id = ? OR usuario_entrada_id = UNHEX(REPLACE(?, '-', ''))",
+                usuario.getNomeCompleto(), usuario.getCpf(), idStr, idStr
+        );
+        jdbcTemplate.update(
+                "UPDATE registros SET usuario_saida_nome = ?, usuario_saida_cpf = ? " +
+                        "WHERE usuario_saida_id = ? OR usuario_saida_id = UNHEX(REPLACE(?, '-', ''))",
+                usuario.getNomeCompleto(), usuario.getCpf(), idStr, idStr
+        );
+
+        // 2. Desvincula as chaves estrangeiras das tabelas operacionais
+        desvincularColunaUsuario("pessoas", "usuario_id", idStr);
+        desvincularColunaUsuario("registros", "usuario_entrada_id", idStr);
+        desvincularColunaUsuario("registros", "usuario_saida_id", idStr);
+        desvincularColunaUsuario("pacientes_internados", "usuario_entrada_id", idStr);
+        desvincularColunaUsuario("pacientes_internados", "usuario_saida_id", idStr);
+        desvincularColunaUsuario("acompanhantes", "usuario_entrada_id", idStr);
+        desvincularColunaUsuario("acompanhantes", "usuario_saida_id", idStr);
+        desvincularColunaUsuario("historico_internacao", "usuario_entrada_id", idStr);
+        desvincularColunaUsuario("historico_internacao", "usuario_saida_id", idStr);
+
+        // 3. Limpa a coleção de unidades do usuário (tabela usuario_unidades)
+        usuario.getUnidades().clear();
+        usuarioRepository.saveAndFlush(usuario);
+
+        // 4. Registra a exclusão no log de auditoria
+        auditoriaService.registrar(
+                usuarioLogado,
+                "EXCLUSAO",
+                "USUARIO",
+                usuario.getId(),
+                usuario.getNomeCompleto() + " (CPF: " + usuario.getCpf() + ")",
+                "Excluiu o registo do utilizador e preservou o histórico"
+        );
+
+        // 5. Exclui o usuário
         usuarioRepository.delete(usuario);
+    }
+
+    private void desvincularColunaUsuario(String tabela, String coluna, String idStr) {
+        try {
+            jdbcTemplate.update(
+                    "UPDATE " + tabela + " SET " + coluna + " = NULL " +
+                            "WHERE " + coluna + " = ? OR " + coluna + " = UNHEX(REPLACE(?, '-', ''))",
+                    idStr, idStr
+            );
+        } catch (Exception ignored) {
+            // Ignora caso alguma tabela ainda não exista no ambiente
+        }
     }
 
     @Transactional

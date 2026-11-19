@@ -47,7 +47,7 @@
 
     <div class="info-auditoria" sec:authorize="hasAnyRole('SISTEMA', 'GERAL')">
       <strong>Cadastro/Última edição por:</strong>
-      <span th:text="${pessoa.usuarioResponsavel != null ? pessoa.usuarioResponsavel.nomeCompleto : 'Sistema (Antigo)'}"></span>
+      <span th:text="${pessoa.operadorResponsavelNome}"></span>
     </div>
   </section>
 
@@ -82,12 +82,12 @@
           <td th:text="${r.paciente}"></td>
 
           <td sec:authorize="hasAnyRole('SISTEMA', 'GERAL')">
-              <span class="badge-operador">
-                  Entrada: <span th:text="${r.usuarioEntrada != null ? r.usuarioEntrada.nomeCompleto : '-'}"></span>
-              </span>
+    <span class="badge-operador">
+        Entrada: <span th:text="${r.operadorEntradaNome}"></span>
+    </span>
             <span class="badge-operador" th:if="${r.horaSaida != null}">
-                  Saída: <span th:text="${r.usuarioSaida != null ? r.usuarioSaida.nomeCompleto : '-'}"></span>
-              </span>
+        Saída: <span th:text="${r.operadorSaidaNome}"></span>
+    </span>
           </td>
         </tr>
         <tr th:if="${#lists.isEmpty(registros)}">

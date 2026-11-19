@@ -45,8 +45,12 @@ public class RegistroService {
         registro.setPessoa(pessoa);
         registro.setHoraEntrada(LocalDateTime.now());
 
-        // AUDITORIA: Quem está realizando a entrada
+        // AUDITORIA: Quem está realizando a entrada (vínculo + snapshot em texto)
         registro.setUsuarioEntrada(operador);
+        if (operador != null) {
+            registro.setUsuarioEntradaNome(operador.getNomeCompleto());
+            registro.setUsuarioEntradaCpf(operador.getCpf());
+        }
 
         // Salva o estado atual da pessoa no momento da entrada
         registro.setUnidade(pessoa.getUnidade());
@@ -71,7 +75,13 @@ public class RegistroService {
         }
 
         registro.setHoraSaida(LocalDateTime.now());
+
+        // AUDITORIA: Quem está realizando a saída (vínculo + snapshot em texto)
         registro.setUsuarioSaida(operador);
+        if (operador != null) {
+            registro.setUsuarioSaidaNome(operador.getNomeCompleto());
+            registro.setUsuarioSaidaCpf(operador.getCpf());
+        }
 
         registroRepository.save(registro);
     }
